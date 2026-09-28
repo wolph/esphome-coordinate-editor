@@ -58,6 +58,11 @@ XY-only zones in an XYZ configuration appear as labelled floor footprints.
 
 ## Quick start
 
+> [!NOTE]
+> The installation examples pin `v0.1.0`, which uses an X/Y map.
+> For the 3D controls shown above, replace `@v0.1.0` in both module URLs with
+> `@6b1c01030290a35acb5c04eac44204fc30bca779` to use this tested preview.
+
 Merge one of the example YAML files into your device configuration, set its UART pins,
 and retain your board, network and authentication settings. The YAML files are fragments,
 not complete firmware configurations. Their entity names match the accompanying mapping files.
@@ -75,8 +80,8 @@ Use [examples/ld2450.yaml](examples/ld2450.yaml) with this web-server configurat
 web_server:
   version: 3
   js_extra_urls:
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@master/coordinate-editor.js
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@master/examples/ld2450-config.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/coordinate-editor.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/examples/ld2450-config.js
 ```
 
 [ld2450-config.js](examples/ld2450-config.js) maps `Target X`, `Target Y` and four zone number
@@ -92,8 +97,8 @@ Use [examples/ld6004.yaml](examples/ld6004.yaml) with:
 web_server:
   version: 3
   js_extra_urls:
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@master/coordinate-editor.js
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@master/examples/ld6004-config.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/coordinate-editor.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/examples/ld6004-config.js
 ```
 
 [ld6004-config.js](examples/ld6004-config.js) maps X/Y/Z targets and four detection areas in
@@ -118,8 +123,8 @@ Browsers fetch module scripts with CORS, so whatever host serves the files must 
 `Access-Control-Allow-Origin` header that admits the device's origin. jsDelivr does. A plain
 file server on your LAN usually does not.
 
-The URLs above target `master`. Change the ref to your published branch, tag or
-commit when hosting your own copy. Pin a tested commit or tag for devices that need stable behaviour.
+The URLs above pin the `v0.1.0` tag. See [CHANGELOG.md](CHANGELOG.md) for releases
+and update the pinned ref when upgrading.
 
 ## Delivering configuration
 
