@@ -228,6 +228,14 @@ class SpatialRenderer {
     const width = Math.max(...projected.map((point) => point.x)) - Math.min(...projected.map((point) => point.x));
     /** @type {number} */
     const height = Math.max(...projected.map((point) => point.y)) - Math.min(...projected.map((point) => point.y));
+    /** @type {number} */
+    const screenX = (Math.max(...projected.map((point) => point.x)) + Math.min(...projected.map((point) => point.x))) / 2 - 320;
+    /** @type {number} */
+    const screenY = (Math.max(...projected.map((point) => point.y)) + Math.min(...projected.map((point) => point.y))) / 2 - 245;
+    // Centre projected content by shifting along the camera's two screen axes.
+    this.camera.centre.x += Math.cos(this.camera.yaw) * screenX + Math.sin(this.camera.yaw) * Math.sin(this.camera.pitch) * screenY;
+    this.camera.centre.y += -Math.sin(this.camera.yaw) * screenX + Math.cos(this.camera.yaw) * Math.sin(this.camera.pitch) * screenY;
+    this.camera.centre.z -= Math.cos(this.camera.pitch) * screenY;
     this.camera.scale = Math.min(500 / Math.max(width, 1), 325 / Math.max(height, 1));
     this.framed = this.editor.zones.some((zone) => zone.actual) || this.editor.visibleTargets().length > 0;
   }
@@ -1237,7 +1245,8 @@ class CoordinateEditor extends HTMLElement {
       }
       this.orbit = null;
       if (this.svg.hasPointerCapture?.(event.pointerId)) this.svg.releasePointerCapture(event.pointerId);
-      this.spatial.render();
+      this.drawGrid();
+      this.refresh();
       return;
     }
     const gesture = this.drag;

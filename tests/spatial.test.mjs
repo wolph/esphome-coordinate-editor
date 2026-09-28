@@ -415,3 +415,54 @@ test("XYZ target-only configurations render height without a selected zone", () 
   assert.equal(editor.svg.querySelectorAll("[data-axis]").length, 0);
   dom.window.close();
 });
+
+test("Fit centres asymmetric projected XYZ content so every valid target is immediately plotted", () => {
+  /** @type {TestContext} */
+  const { dom, editor } = setup();
+  editor.zones = [];
+  editor.config.zones = [];
+  editor.spatial.camera.yaw = 0;
+  editor.spatial.camera.pitch = 0.82;
+  editor.targets = [
+    { ...target("Near", 1), x: 2, y: -4, index: 0 },
+    { ...target("Far", 2), x: 0, y: 3, index: 1 },
+    { ...target("Below", -6), x: 0, y: -3, index: 2 },
+  ];
+  editor.fitView();
+  assert.match(editor.summary.textContent, /3 usable targets, 3 plotted/);
+  assert.doesNotMatch(editor.details.textContent, /Outside view/);
+  assert.equal(editor.targetLayer.querySelectorAll("circle.point").length, 3);
+  for (const current of editor.targets) {
+    /** @type {{x: number, y: number}} */
+    const projected = editor.spatial.project(current);
+    assert.ok(projected.x >= 70 && projected.x <= 570, `${current.definition.label} X ${projected.x}`);
+    assert.ok(projected.y >= 82.5 - 1e-8 && projected.y <= 407.5 + 1e-8,
+      `${current.definition.label} Y ${projected.y}`);
+  }
+  dom.window.close();
+});
+
+test("orbit completion and cancellation enable working camera buttons before another poll", () => {
+  for (const cancel of [false, true]) {
+    /** @type {TestContext} */
+    const { dom, editor } = setup();
+    /** @type {HTMLButtonElement} */
+    const zoom = editor.shadowRoot.querySelector('[data-action="zoom-in"]');
+    /** @type {HTMLButtonElement} */
+    const reset = editor.shadowRoot.querySelector('[data-action="reset-view"]');
+    editor.startGesture(pointer(editor.svg));
+    editor.updateGesture(pointer(editor.svg, 80, 40));
+    assert.equal(zoom.disabled, true);
+    assert.equal(reset.disabled, true);
+    editor.endGesture({ pointerId: 7 }, cancel);
+    assert.equal(editor.orbit, null);
+    assert.equal(zoom.disabled, false);
+    assert.equal(reset.disabled, false);
+    zoom.click();
+    assert.equal(editor.spatial.camera.zoom, 1.2);
+    reset.click();
+    assert.equal(editor.spatial.camera.zoom, 1);
+    assert.equal(editor.spatial.camera.yaw, -0.65);
+    dom.window.close();
+  }
+});
