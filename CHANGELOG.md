@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 - Unreleased
+## 0.1.0 - 2026-09-29
 
 - Extract the dependency-free coordinate editor into a standalone repository.
 - Display X/Y targets and rectangular zones, with optional Z values and bounds.
