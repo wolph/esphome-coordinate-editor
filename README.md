@@ -74,6 +74,10 @@ For LD6002B, use [ld6002b.yaml](examples/ld6002b.yaml) and
 [ld6002b-config.js](examples/ld6002b-config.js). The adapter uses the `ld6002b` components
 and maps eight areas: four detection and four interference areas. There are no dwell areas.
 
+Browsers fetch module scripts with CORS, so whatever host serves the files must send an
+`Access-Control-Allow-Origin` header that admits the device's origin. jsDelivr does; a plain
+file server on your LAN usually does not.
+
 The URLs above target `main` as supplied in the installation examples. They only resolve
 once the files are published on that ref. Change the ref to your published branch, tag or
 commit when hosting your own copy. Pin a tested commit or tag for devices that need stable behaviour.
