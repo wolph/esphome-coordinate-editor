@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Coordinate editor fixture</title>
+  </head>
+  <body style="margin: 0; background: #e3eaf0">
+    <esp-app></esp-app>
+    <script src="../../coordinate-editor.js"></script>
+    <script>
+      const values = {};
+      window.fixtureValues = values;
+      window.fixtureWrites = [];
+      const waiting = [];
+      window.fixtureRelease = () => {
+        window.fixtureDeferred = false;
+        waiting.splice(0).forEach((resolve) => resolve());
+      };
+      window.fetch = async (url, options) => {
+        const parts = url.split("/"),
+          id = decodeURIComponent(parts[2]);
+        if (options.method === "POST") {
+          window.fixtureWrites.push(url);
+          if (window.fixtureFail) throw Error("Fixture disconnected");
+          if (parts[1] === "number") values[id] = Number(new URL(url, location.href).searchParams.get("value"));
+        } else if (window.fixtureDeferred) await new Promise((resolve) => waiting.push(resolve));
+        return { ok: true, json: async () => ({ value: window.fixtureUnavailable === id ? null : values[id] }) };
+      };
+      const reference = (id, domain = "number") => ({ id, domain, scale: 1 });
+      const editor = document.createElement("coordinate-editor");
+      window.fixtureEditor = editor;
+      const boxes = [
+        { x_min: -3.5, x_max: -0.5, y_min: 1, y_max: 4 },
+        { x_min: 0.5, x_max: 3, y_min: 2, y_max: 6, z_min: 0, z_max: 2.5 },
+        { x_min: -2, x_max: 1, y_min: 5, y_max: 7, z_min: -0.5, z_max: 3 },
+        { x_min: -4, x_max: -2, y_min: 5, y_max: 7.5 },
+      ];
+      const zones = boxes.map((box, index) => {
+        for (const [key, value] of Object.entries(box)) values[`area_${index}_${key}`] = value;
+        const zone = {
+          label: `Area ${index}`,
+          write: index === 2 ? undefined : index === 1 ? "staged" : "direct",
+          bounds: Object.fromEntries(
+            Object.keys(box).map((key) => [
+              key,
+              reference(`area_${index}_${key}`, index === 0 || index === 3 ? "number" : "sensor"),
+            ]),
+          ),
+        };
+        if (index === 1)
+          Object.assign(zone, {
+            staging: Object.fromEntries(Object.keys(box).map((key) => [key, reference(`stage_${key}`)])),
+            stagingHasNoSideEffects: true,
+            applyButton: reference("apply", "button"),
+          });
+        return zone;
+      });
+      const targets = [
+        { label: "Target 1", x: -1.5, y: 2.5 },
+        { label: "Target 2", x: 1.5, y: 3.5, z: 1.2 },
+        { label: "Target 3", x: 1.6, y: 3.6, z: null },
+        { label: "Absent", x: 0, y: 0, presence: 0 },
+        { label: "Expired", x: 3, y: 6, age: 20 },
+      ].map((target, index) => {
+        const definition = { label: target.label };
+        for (const key of Object.keys(target).filter((key) => key !== "label")) {
+          const id = `target_${index}_${key}`;
+          values[id] = target[key];
+          definition[key] = reference(id, "sensor");
+          if (key === "presence") definition[key].threshold = 0.5;
+          if (key === "age") definition[key].max = 5;
+        }
+        return definition;
+      });
+      editor.config = {
+        title: "Detection zones",
+        originLabel: "Radar",
+        unit: "m",
+        axes: {
+          x: { min: -5, max: 5, step: 0.1 },
+          y: { min: 0, max: 8, step: 0.1 },
+          z: { min: -5, max: 5, step: 0.1 },
+        },
+        pollMs: 1000,
+        expireMs: 5000,
+        pendingTimeoutMs: 1500,
+        targets,
+        zones,
+      };
+      const mode = new URLSearchParams(location.search).get("mode");
+      if (mode === "direct") editor.config.zones = [zones[0]];
+      if (mode === "readonly") editor.config.zones = [zones[2]];
+      if (mode === "staged") editor.config.zones = [zones[1]];
+      window.fixtureConfirm = () => {
+        for (const key of Object.keys(zones[1].bounds)) values[`area_1_${key}`] = values[`stage_${key}`];
+      };
+      window.coordinateEditorConfig = editor.config;
+      window.dispatchEvent(new Event("coordinate-editor-config"));
+      window.fixtureEditor = null;
+      document.addEventListener("DOMContentLoaded", () => {
+        window.fixtureEditor = document.querySelector("coordinate-editor");
+      });
+    </script>
+  </body>
+</html>

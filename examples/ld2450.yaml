@@ -1,0 +1,41 @@
+# Merge into a device configuration with Wi-Fi. Replace GPIOXX with UART pins.
+# Connect microcontroller TX to radar RX and RX to radar TX.
+uart:
+  tx_pin: GPIOXX
+  rx_pin: GPIOXX
+  baud_rate: 256000
+  parity: NONE
+  stop_bits: 1
+
+ld2450:
+  id: radar
+
+web_server:
+  version: 3
+  js_extra_urls:
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@main/coordinate-editor.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@main/examples/ld2450-config.js
+
+sensor:
+  - platform: ld2450
+    target_1:
+      x:
+        name: "Target X"
+      y:
+        name: "Target Y"
+
+# Each of these number writes can change the device immediately.
+# Configure the LD2450 zone mode separately.
+number:
+  - platform: ld2450
+    presence_timeout:
+      name: "Presence Timeout"
+    zone_1:
+      x1:
+        name: "Zone X Min"
+      x2:
+        name: "Zone X Max"
+      y1:
+        name: "Zone Y Min"
+      y2:
+        name: "Zone Y Max"

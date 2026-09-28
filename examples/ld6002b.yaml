@@ -1,0 +1,465 @@
+# Merge into a device configuration with Wi-Fi and the LD6002B component.
+# Requires firmware with the LD6002B hub, sensors, numbers, select and buttons.
+# Areas 0-3 are detection areas. Areas 4-7 are interference areas.
+# Replace GPIOXX with your UART pins. Connect microcontroller TX to radar RX and RX to radar TX.
+uart:
+  tx_pin: GPIOXX
+  rx_pin: GPIOXX
+  baud_rate: 115200
+
+ld6002b:
+  id: radar
+
+web_server:
+  version: 3
+  js_extra_urls:
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@main/coordinate-editor.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@main/examples/ld6002b-config.js
+
+binary_sensor:
+  - platform: ld6002b
+    target_1:
+      id: target_1_present
+      name: "Target 1 Present"
+
+sensor:
+  - platform: ld6002b
+    target_1:
+      x:
+        name: "Target 1 X"
+      y:
+        name: "Target 1 Y"
+      z:
+        name: "Target 1 Z"
+    detection_area_0:
+      x_min:
+        id: area_0_x_min
+        name: "Area 0 X Min"
+      x_max:
+        id: area_0_x_max
+        name: "Area 0 X Max"
+      y_min:
+        id: area_0_y_min
+        name: "Area 0 Y Min"
+      y_max:
+        id: area_0_y_max
+        name: "Area 0 Y Max"
+      z_min:
+        id: area_0_z_min
+        name: "Area 0 Z Min"
+      z_max:
+        id: area_0_z_max
+        name: "Area 0 Z Max"
+    detection_area_1:
+      x_min:
+        id: area_1_x_min
+        name: "Area 1 X Min"
+      x_max:
+        id: area_1_x_max
+        name: "Area 1 X Max"
+      y_min:
+        id: area_1_y_min
+        name: "Area 1 Y Min"
+      y_max:
+        id: area_1_y_max
+        name: "Area 1 Y Max"
+      z_min:
+        id: area_1_z_min
+        name: "Area 1 Z Min"
+      z_max:
+        id: area_1_z_max
+        name: "Area 1 Z Max"
+    detection_area_2:
+      x_min:
+        id: area_2_x_min
+        name: "Area 2 X Min"
+      x_max:
+        id: area_2_x_max
+        name: "Area 2 X Max"
+      y_min:
+        id: area_2_y_min
+        name: "Area 2 Y Min"
+      y_max:
+        id: area_2_y_max
+        name: "Area 2 Y Max"
+      z_min:
+        id: area_2_z_min
+        name: "Area 2 Z Min"
+      z_max:
+        id: area_2_z_max
+        name: "Area 2 Z Max"
+    detection_area_3:
+      x_min:
+        id: area_3_x_min
+        name: "Area 3 X Min"
+      x_max:
+        id: area_3_x_max
+        name: "Area 3 X Max"
+      y_min:
+        id: area_3_y_min
+        name: "Area 3 Y Min"
+      y_max:
+        id: area_3_y_max
+        name: "Area 3 Y Max"
+      z_min:
+        id: area_3_z_min
+        name: "Area 3 Z Min"
+      z_max:
+        id: area_3_z_max
+        name: "Area 3 Z Max"
+    interference_area_0:
+      x_min:
+        id: area_4_x_min
+        name: "Area 4 X Min"
+      x_max:
+        id: area_4_x_max
+        name: "Area 4 X Max"
+      y_min:
+        id: area_4_y_min
+        name: "Area 4 Y Min"
+      y_max:
+        id: area_4_y_max
+        name: "Area 4 Y Max"
+      z_min:
+        id: area_4_z_min
+        name: "Area 4 Z Min"
+      z_max:
+        id: area_4_z_max
+        name: "Area 4 Z Max"
+    interference_area_1:
+      x_min:
+        id: area_5_x_min
+        name: "Area 5 X Min"
+      x_max:
+        id: area_5_x_max
+        name: "Area 5 X Max"
+      y_min:
+        id: area_5_y_min
+        name: "Area 5 Y Min"
+      y_max:
+        id: area_5_y_max
+        name: "Area 5 Y Max"
+      z_min:
+        id: area_5_z_min
+        name: "Area 5 Z Min"
+      z_max:
+        id: area_5_z_max
+        name: "Area 5 Z Max"
+    interference_area_2:
+      x_min:
+        id: area_6_x_min
+        name: "Area 6 X Min"
+      x_max:
+        id: area_6_x_max
+        name: "Area 6 X Max"
+      y_min:
+        id: area_6_y_min
+        name: "Area 6 Y Min"
+      y_max:
+        id: area_6_y_max
+        name: "Area 6 Y Max"
+      z_min:
+        id: area_6_z_min
+        name: "Area 6 Z Min"
+      z_max:
+        id: area_6_z_max
+        name: "Area 6 Z Max"
+    interference_area_3:
+      x_min:
+        id: area_7_x_min
+        name: "Area 7 X Min"
+      x_max:
+        id: area_7_x_max
+        name: "Area 7 X Max"
+      y_min:
+        id: area_7_y_min
+        name: "Area 7 Y Min"
+      y_max:
+        id: area_7_y_max
+        name: "Area 7 Y Max"
+      z_min:
+        id: area_7_z_min
+        name: "Area 7 Z Min"
+      z_max:
+        id: area_7_z_max
+        name: "Area 7 Z Max"
+
+select:
+  - platform: ld6002b
+    area_id:
+      id: radar_area_id
+      name: "Radar Area ID"
+
+# These values stay in ESPHome until the button sends the complete box.
+number:
+  - platform: ld6002b
+    area_config:
+      x_min:
+        id: radar_area_x_min
+        name: "Radar Area X Min"
+      x_max:
+        id: radar_area_x_max
+        name: "Radar Area X Max"
+      y_min:
+        id: radar_area_y_min
+        name: "Radar Area Y Min"
+      y_max:
+        id: radar_area_y_max
+        name: "Radar Area Y Max"
+      z_min:
+        id: radar_area_z_min
+        name: "Radar Area Z Min"
+      z_max:
+        id: radar_area_z_max
+        name: "Radar Area Z Max"
+  - &draft_defaults
+    platform: template
+    id: zone_draft_x_min
+    name: "Zone Draft X Min"
+    entity_category: config
+    optimistic: true
+    restore_value: false
+    min_value: -10
+    max_value: 10
+    step: 0.1
+    mode: box
+    unit_of_measurement: m
+  - <<: *draft_defaults
+    id: zone_draft_x_max
+    name: "Zone Draft X Max"
+  - <<: *draft_defaults
+    id: zone_draft_y_min
+    name: "Zone Draft Y Min"
+  - <<: *draft_defaults
+    id: zone_draft_y_max
+    name: "Zone Draft Y Max"
+  - <<: *draft_defaults
+    id: zone_draft_z_min
+    name: "Zone Draft Z Min"
+  - <<: *draft_defaults
+    id: zone_draft_z_max
+    name: "Zone Draft Z Max"
+
+button:
+  - platform: ld6002b
+    apply_area:
+      id: radar_apply_area
+      name: "Radar Apply Area"
+    get_areas:
+      name: "Radar Get Areas"
+  - platform: template
+    id: area_0_apply
+    name: "Area 0 Apply"
+    entity_category: config
+    on_press:
+      - select.set:
+          id: radar_area_id
+          option: detection_area_0
+      - number.set:
+          id: radar_area_x_min
+          value: !lambda return id(zone_draft_x_min).state;
+      - number.set:
+          id: radar_area_x_max
+          value: !lambda return id(zone_draft_x_max).state;
+      - number.set:
+          id: radar_area_y_min
+          value: !lambda return id(zone_draft_y_min).state;
+      - number.set:
+          id: radar_area_y_max
+          value: !lambda return id(zone_draft_y_max).state;
+      - number.set:
+          id: radar_area_z_min
+          value: !lambda return id(zone_draft_z_min).state;
+      - number.set:
+          id: radar_area_z_max
+          value: !lambda return id(zone_draft_z_max).state;
+      - button.press: radar_apply_area
+  - platform: template
+    id: area_1_apply
+    name: "Area 1 Apply"
+    entity_category: config
+    on_press:
+      - select.set:
+          id: radar_area_id
+          option: detection_area_1
+      - number.set:
+          id: radar_area_x_min
+          value: !lambda return id(zone_draft_x_min).state;
+      - number.set:
+          id: radar_area_x_max
+          value: !lambda return id(zone_draft_x_max).state;
+      - number.set:
+          id: radar_area_y_min
+          value: !lambda return id(zone_draft_y_min).state;
+      - number.set:
+          id: radar_area_y_max
+          value: !lambda return id(zone_draft_y_max).state;
+      - number.set:
+          id: radar_area_z_min
+          value: !lambda return id(zone_draft_z_min).state;
+      - number.set:
+          id: radar_area_z_max
+          value: !lambda return id(zone_draft_z_max).state;
+      - button.press: radar_apply_area
+  - platform: template
+    id: area_2_apply
+    name: "Area 2 Apply"
+    entity_category: config
+    on_press:
+      - select.set:
+          id: radar_area_id
+          option: detection_area_2
+      - number.set:
+          id: radar_area_x_min
+          value: !lambda return id(zone_draft_x_min).state;
+      - number.set:
+          id: radar_area_x_max
+          value: !lambda return id(zone_draft_x_max).state;
+      - number.set:
+          id: radar_area_y_min
+          value: !lambda return id(zone_draft_y_min).state;
+      - number.set:
+          id: radar_area_y_max
+          value: !lambda return id(zone_draft_y_max).state;
+      - number.set:
+          id: radar_area_z_min
+          value: !lambda return id(zone_draft_z_min).state;
+      - number.set:
+          id: radar_area_z_max
+          value: !lambda return id(zone_draft_z_max).state;
+      - button.press: radar_apply_area
+  - platform: template
+    id: area_3_apply
+    name: "Area 3 Apply"
+    entity_category: config
+    on_press:
+      - select.set:
+          id: radar_area_id
+          option: detection_area_3
+      - number.set:
+          id: radar_area_x_min
+          value: !lambda return id(zone_draft_x_min).state;
+      - number.set:
+          id: radar_area_x_max
+          value: !lambda return id(zone_draft_x_max).state;
+      - number.set:
+          id: radar_area_y_min
+          value: !lambda return id(zone_draft_y_min).state;
+      - number.set:
+          id: radar_area_y_max
+          value: !lambda return id(zone_draft_y_max).state;
+      - number.set:
+          id: radar_area_z_min
+          value: !lambda return id(zone_draft_z_min).state;
+      - number.set:
+          id: radar_area_z_max
+          value: !lambda return id(zone_draft_z_max).state;
+      - button.press: radar_apply_area
+  - platform: template
+    id: area_4_apply
+    name: "Area 4 Apply"
+    entity_category: config
+    on_press:
+      - select.set:
+          id: radar_area_id
+          option: interference_area_0
+      - number.set:
+          id: radar_area_x_min
+          value: !lambda return id(zone_draft_x_min).state;
+      - number.set:
+          id: radar_area_x_max
+          value: !lambda return id(zone_draft_x_max).state;
+      - number.set:
+          id: radar_area_y_min
+          value: !lambda return id(zone_draft_y_min).state;
+      - number.set:
+          id: radar_area_y_max
+          value: !lambda return id(zone_draft_y_max).state;
+      - number.set:
+          id: radar_area_z_min
+          value: !lambda return id(zone_draft_z_min).state;
+      - number.set:
+          id: radar_area_z_max
+          value: !lambda return id(zone_draft_z_max).state;
+      - button.press: radar_apply_area
+  - platform: template
+    id: area_5_apply
+    name: "Area 5 Apply"
+    entity_category: config
+    on_press:
+      - select.set:
+          id: radar_area_id
+          option: interference_area_1
+      - number.set:
+          id: radar_area_x_min
+          value: !lambda return id(zone_draft_x_min).state;
+      - number.set:
+          id: radar_area_x_max
+          value: !lambda return id(zone_draft_x_max).state;
+      - number.set:
+          id: radar_area_y_min
+          value: !lambda return id(zone_draft_y_min).state;
+      - number.set:
+          id: radar_area_y_max
+          value: !lambda return id(zone_draft_y_max).state;
+      - number.set:
+          id: radar_area_z_min
+          value: !lambda return id(zone_draft_z_min).state;
+      - number.set:
+          id: radar_area_z_max
+          value: !lambda return id(zone_draft_z_max).state;
+      - button.press: radar_apply_area
+  - platform: template
+    id: area_6_apply
+    name: "Area 6 Apply"
+    entity_category: config
+    on_press:
+      - select.set:
+          id: radar_area_id
+          option: interference_area_2
+      - number.set:
+          id: radar_area_x_min
+          value: !lambda return id(zone_draft_x_min).state;
+      - number.set:
+          id: radar_area_x_max
+          value: !lambda return id(zone_draft_x_max).state;
+      - number.set:
+          id: radar_area_y_min
+          value: !lambda return id(zone_draft_y_min).state;
+      - number.set:
+          id: radar_area_y_max
+          value: !lambda return id(zone_draft_y_max).state;
+      - number.set:
+          id: radar_area_z_min
+          value: !lambda return id(zone_draft_z_min).state;
+      - number.set:
+          id: radar_area_z_max
+          value: !lambda return id(zone_draft_z_max).state;
+      - button.press: radar_apply_area
+  - platform: template
+    id: area_7_apply
+    name: "Area 7 Apply"
+    entity_category: config
+    on_press:
+      - select.set:
+          id: radar_area_id
+          option: interference_area_3
+      - number.set:
+          id: radar_area_x_min
+          value: !lambda return id(zone_draft_x_min).state;
+      - number.set:
+          id: radar_area_x_max
+          value: !lambda return id(zone_draft_x_max).state;
+      - number.set:
+          id: radar_area_y_min
+          value: !lambda return id(zone_draft_y_min).state;
+      - number.set:
+          id: radar_area_y_max
+          value: !lambda return id(zone_draft_y_max).state;
+      - number.set:
+          id: radar_area_z_min
+          value: !lambda return id(zone_draft_z_min).state;
+      - number.set:
+          id: radar_area_z_max
+          value: !lambda return id(zone_draft_z_max).state;
+      - button.press: radar_apply_area
