@@ -289,6 +289,32 @@ npm test
 ```
 
 The suite uses Node's test runner and jsdom. Neither is needed on the device or in the browser.
+Install Chromium and run the browser checks with:
+
+```sh
+npx playwright install chromium
+npm run check:demo
+```
+
+The browser check starts its own temporary loopback server and uses the actual editor and
+simulator. It checks 3D orbit and zoom, clamped XYZ handles, local drafts, staged and direct
+Apply, Discard, Top view, pause and resume, all sensor presets, reduced motion and desktop,
+tablet and mobile layouts. Entity requests stay in memory. Console errors fail the check.
+The Pages workflow runs this check before building the site.
+
+Install `ffmpeg` with your system package manager (`brew install ffmpeg` on macOS or
+`sudo apt-get install ffmpeg` on Debian/Ubuntu), then reproduce the walkthrough with:
+
+```sh
+npm run record:demo
+```
+
+The recorder uses the same browser interactions with presentation holds. It creates a
+1440x1200 H264 walkthrough, a 12-second GIF preview, a poster and English captions in
+`demo/media/`. Caption times follow the recorded interactions, including pending and
+confirmed staged values. All footage uses simulated data. The recorder closes its own
+browser and server and removes temporary capture files.
+
 To serve the interactive demo and the test fixture:
 
 ```sh
