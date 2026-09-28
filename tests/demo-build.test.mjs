@@ -25,7 +25,13 @@ test("Pages build clears stale output and serves its editor assets under a proje
     /** @type {JSDOM} */
     const page = new JSDOM(await readFile(path.join(output, "index.html"), "utf8"), { url: "https://wolph.github.io/esphome-coordinate-editor/" });
     for (const element of page.window.document.querySelectorAll("script[src], link[href], iframe[src]")) {
-      await exists(output, new URL(element.getAttribute("src") ?? element.getAttribute("href"), page.window.location.href));
+      /** @type {URL} */
+      const url = new URL(element.getAttribute("src") ?? element.getAttribute("href"), page.window.location.href);
+      if (url.protocol === "data:") {
+        assert.match(decodeURIComponent(url.href), /^data:image\/svg\+xml,<svg\s/);
+        continue;
+      }
+      await exists(output, url);
     }
     /** @type {URL} */
     const frameUrl = new URL(page.window.document.querySelector("iframe").src);
