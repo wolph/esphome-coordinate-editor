@@ -15,7 +15,7 @@
           <h1>ESPHome coordinate editor</h1>
           <span class="tag">Simulated data</span>
         </div>
-        <p class="lead">Move a zone, resize a corner or type exact bounds. Try the sensor mappings below.</p>
+        <p class="lead">Move and resize zones in 3D, switch to Top view or type exact bounds. Try the sensor mappings below.</p>
         <div class="toolbar" aria-label="Simulation controls">
           <label for="preset">Sensor</label>
           <select id="preset" disabled>
@@ -23,8 +23,15 @@
             <option value="ld2450">LD2450 - 2D</option>
             <option value="ld6002b">LD6002B - 3D</option>
           </select>
-          <button id="pause" type="button" disabled>Pause</button>
-          <button id="reset" type="button" disabled>Reset</button>
+          <button id="pause" type="button" aria-label="Pause" disabled>
+            <svg class="button-icon" data-icon="pause" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5v14M16 5v14" /></svg>
+            <svg class="button-icon" data-icon="resume" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden><path d="m8 4 12 8-12 8z" /></svg>
+            <span class="button-label">Pause</span>
+          </button>
+          <button id="reset" type="button" disabled>
+            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9a8 8 0 1 1 0 6M4 3v6h6" /></svg>
+            <span class="button-label">Reset</span>
+          </button>
           <span id="simulation-status" role="status">Loading editor</span>
           <a href="walkthrough.html">Watch the walkthrough</a>
         </div>

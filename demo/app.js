@@ -38,7 +38,12 @@ window.addEventListener("message", (event) => {
   const preset = PRESETS.find((item) => item.id === state.preset);
   if (!preset) return;
   select.value = preset.id;
-  pause.textContent = state.paused ? "Resume" : "Pause";
+  /** @type {string} */
+  const pauseLabel = state.paused ? "Resume" : "Pause";
+  pause.querySelector(".button-label").textContent = pauseLabel;
+  pause.setAttribute("aria-label", pauseLabel);
+  pause.querySelector('[data-icon="pause"]').toggleAttribute("hidden", state.paused);
+  pause.querySelector('[data-icon="resume"]').toggleAttribute("hidden", !state.paused);
   status.textContent = state.ready ? `Simulation ${state.paused ? "paused" : "running"}` : "Loading editor";
   detail.textContent = `${preset.detail}. All reads and writes stay in this browser.`;
   setBusy(!state.ready);

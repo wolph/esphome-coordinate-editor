@@ -11,7 +11,9 @@ p { line-height: 1.5; }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .toolbar label { font-weight: 600; }
 button, select { font: inherit; color: inherit; background: white; border: 1px solid #829bad; border-radius: 5px; padding: 8px 12px; min-height: 44px; }
-button { cursor: pointer; }
+button { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.button-icon { width: 20px; height: 20px; flex: 0 0 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.button-icon[hidden], button[hidden] { display: none; }
 button:disabled, select:disabled { opacity: 0.6; cursor: default; }
 button:hover:not(:disabled), select:hover:not(:disabled) { background: #e9f2f7; border-color: #176ba0; }
 button:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid #377bd2; outline-offset: 3px; }

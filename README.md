@@ -18,10 +18,11 @@ The preview and [live demo](https://wolph.github.io/esphome-coordinate-editor/) 
 data. Try dragging, resizing, precise bounds, Apply and Discard without connecting a device.
 Reset and sensor switching discard local edits. All demo entity reads and writes stay in memory.
 
-- Move and resize zones on an X/Y map with equal axis scale.
+- Move and resize XYZ zones with direct axis handles in an orbitable 3D scene.
+- Edit precise rectangles in Top view, with equal X/Y scale.
 - Enter exact bounds, move by keyboard and fit the viewport to your zones.
 - Compare actual bounds with local drafts before applying changes.
-- Show X/Y targets for 2D sensors and Z values and bounds for 3D sensors.
+- Show X/Y targets for 2D sensors and positioned XYZ targets with floor drop-lines for 3D sensors.
 - Load one self-contained JavaScript custom element, with no runtime dependencies.
 
 | Sensor mapping | Coordinates | Areas in the example | Writes |
@@ -35,14 +36,25 @@ device installation. The demo reuses the actual editor and these example mapping
 three simulated target slots. Matching simulated values do not confirm physical radar filtering
 or hardware behaviour.
 
-Drag a rectangle to move it, drag a corner to resize it, or type bounds in the side panel.
-Arrow keys move the selected zone while the map has focus. Shift multiplies the step by ten.
-Escape cancels a drag. **Fit view** changes the viewport without changing the allowed bounds.
-Solid rectangles show actual values. Dashed rectangles show local drafts.
+XYZ configurations open in **3D view**. Drag empty scene space to orbit, use the wheel or
+zoom buttons, and reset the camera with **Reset view**. Zones with XYZ bounds appear as
+transparent cuboids. Target drop-lines show height above the floor. All three axes use the same
+unit scale. Initial framing includes the X/Y room and configured zone heights, leaving empty
+negative Z space out of the scene.
 
-X and Y have equal visual scale. A 2D sensor needs no Z configuration. For a 3D sensor,
-Z appears as a target value and optional editable bounds alongside the X/Y map.
-There is no 3D scene.
+Select **Move** and drag an X, Y or Z handle to translate a zone. Select **Resize** to move one
+minimum or maximum face. Movement snaps to configured steps and stays within permitted bounds.
+**Top view** preserves the precise rectangle editor: drag inside a zone to move it or drag a
+corner to resize it. Both views retain local drafts. Numeric bounds are always available.
+
+Arrow keys move X/Y while the scene has focus. PageUp and PageDown move Z in 3D view. Shift
+multiplies the step by ten. Escape cancels a drag. In 3D, **Fit view** fits zones, drafts and
+targets without changing permitted bounds. Solid outlines show actual values. Dashed outlines show local
+drafts. Edits send no entity writes until **Apply**.
+
+A 2D sensor needs no Z configuration and opens directly in the X/Y map. A target without a
+usable Z value stays in the numeric list and Top view, without an invented height in 3D.
+XY-only zones in an XYZ configuration appear as labelled floor footprints.
 
 ## Quick start
 
@@ -195,7 +207,7 @@ Existing scripts that create an element, assign `editor.config` and append it st
 | `axes.x`, `axes.y` | Required `{ min, max, step }` in displayed units. Values must be finite, `min < max`, `step > 0`. Steps are relative to `min`. |
 | `axes.z` | Optional axis with the same fields. Omit for 2D. |
 | `targets` | Array of coordinate slots. Use `[]` to show zones only. |
-| `zones` | Array of rectangles. Use `[]` for a target-only view. |
+| `zones` | Array of rectangles or XYZ cuboids. Use `[]` for a target-only view. |
 | `pollMs` | Poll interval in milliseconds, at least 250. Examples use 1000. |
 | `expireMs` | Target expiry after a successful read, greater than `pollMs`. Examples use 5000. |
 | `pendingTimeoutMs` | Optional deadline for staged actual-value confirmation, default 15000 ms. Must be finite, positive and at most 2147483647. Starts after the Apply HTTP response succeeds. |
