@@ -13,8 +13,8 @@ ld6004:
 web_server:
   version: 3
   js_extra_urls:
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@main/coordinate-editor.js
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@main/examples/ld6004-config.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/coordinate-editor.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/examples/ld6004-config.js
 
 binary_sensor:
   - platform: ld6004

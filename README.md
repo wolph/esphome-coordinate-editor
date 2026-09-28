@@ -35,8 +35,8 @@ Use [examples/ld2450.yaml](examples/ld2450.yaml) with this web-server configurat
 web_server:
   version: 3
   js_extra_urls:
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@main/coordinate-editor.js
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@main/examples/ld2450-config.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/coordinate-editor.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/examples/ld2450-config.js
 ```
 
 [ld2450-config.js](examples/ld2450-config.js) maps `Target X`, `Target Y` and four zone number
@@ -52,8 +52,8 @@ Use [examples/ld6004.yaml](examples/ld6004.yaml) with:
 web_server:
   version: 3
   js_extra_urls:
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@main/coordinate-editor.js
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@main/examples/ld6004-config.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/coordinate-editor.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/examples/ld6004-config.js
 ```
 
 [ld6004-config.js](examples/ld6004-config.js) maps X/Y/Z targets and four detection areas in
@@ -78,9 +78,8 @@ Browsers fetch module scripts with CORS, so whatever host serves the files must 
 `Access-Control-Allow-Origin` header that admits the device's origin. jsDelivr does; a plain
 file server on your LAN usually does not.
 
-The URLs above target `main` as supplied in the installation examples. They only resolve
-once the files are published on that ref. Change the ref to your published branch, tag or
-commit when hosting your own copy. Pin a tested commit or tag for devices that need stable behaviour.
+The URLs above pin the `v0.1.0` tag. Newer releases are listed in CHANGELOG.md; change the ref
+when you upgrade, and keep a pinned tag rather than a branch on devices that need stable behaviour.
 
 ## Delivering configuration
 
