@@ -1,8 +1,39 @@
-# ESPHome coordinate editor
+<h1 align="center">ESPHome coordinate editor</h1>
 
-Map target coordinates and edit rectangular zones on an ESPHome device's web page.
-`coordinate-editor.js` is a self-contained custom element written in plain JavaScript.
-It uses the device's web server REST API, with no runtime dependencies or build step.
+<p align="center">Map radar targets and edit rectangular zones in your ESPHome web interface.</p>
+
+<p align="center">
+  <a href="https://wolph.github.io/esphome-coordinate-editor/">Try the live demo</a> |
+  <a href="https://wolph.github.io/esphome-coordinate-editor/walkthrough.html">Watch the walkthrough</a> |
+  <a href="#quick-start">Quick start</a>
+</p>
+
+<p align="center">
+  <a href="https://wolph.github.io/esphome-coordinate-editor/walkthrough.html">
+    <img src="https://wolph.github.io/esphome-coordinate-editor/media/preview.gif" alt="Simulated targets moving through zones in the ESPHome coordinate editor" width="960" />
+  </a>
+</p>
+
+The preview and [live demo](https://wolph.github.io/esphome-coordinate-editor/) use simulated
+data. Try dragging, resizing, precise bounds, Apply and Discard without connecting a device.
+Reset and sensor switching discard local edits. All demo entity reads and writes stay in memory.
+
+- Move and resize zones on an X/Y map with equal axis scale.
+- Enter exact bounds, move by keyboard and fit the viewport to your zones.
+- Compare actual bounds with local drafts before applying changes.
+- Show X/Y targets for 2D sensors and Z values and bounds for 3D sensors.
+- Load one self-contained JavaScript custom element, with no runtime dependencies.
+
+| Sensor mapping | Coordinates | Areas in the example | Writes |
+| --- | --- | --- | --- |
+| [LD2450](examples/ld2450.yaml) | 2D, millimetres displayed as metres | One zone | Direct bound writes |
+| [LD6004](examples/ld6004.yaml) | 3D, metres | Four detection areas | Staging numbers and area Apply button |
+| [LD6002B](examples/ld6002b.yaml) | 3D, metres | Four detection and four interference areas | Staging numbers and area Apply button |
+
+`coordinate-editor.js` uses the device's web server REST API. There is no build step for
+device installation. The demo reuses the actual editor and these example mappings, adding
+three simulated target slots. Matching simulated values do not confirm physical radar filtering
+or hardware behaviour.
 
 Drag a rectangle to move it, drag a corner to resize it, or type bounds in the side panel.
 Arrow keys move the selected zone while the map has focus. Shift multiplies the step by ten.
@@ -12,9 +43,6 @@ Solid rectangles show actual values. Dashed rectangles show local drafts.
 X and Y have equal visual scale. A 2D sensor needs no Z configuration. For a 3D sensor,
 Z appears as a target value and optional editable bounds alongside the X/Y map.
 There is no 3D scene.
-
-> Screenshot placeholder: add a capture of `tests/fixtures/coordinate-editor.html` here.
-> Label fixture captures as simulated data, not hardware captures.
 
 ## Quick start
 
@@ -35,8 +63,8 @@ Use [examples/ld2450.yaml](examples/ld2450.yaml) with this web-server configurat
 web_server:
   version: 3
   js_extra_urls:
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@main/coordinate-editor.js
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@main/examples/ld2450-config.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@master/coordinate-editor.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@master/examples/ld2450-config.js
 ```
 
 [ld2450-config.js](examples/ld2450-config.js) maps `Target X`, `Target Y` and four zone number
@@ -52,8 +80,8 @@ Use [examples/ld6004.yaml](examples/ld6004.yaml) with:
 web_server:
   version: 3
   js_extra_urls:
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@main/coordinate-editor.js
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@main/examples/ld6004-config.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@master/coordinate-editor.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@master/examples/ld6004-config.js
 ```
 
 [ld6004-config.js](examples/ld6004-config.js) maps X/Y/Z targets and four detection areas in
@@ -75,11 +103,10 @@ For LD6002B, use [ld6002b.yaml](examples/ld6002b.yaml) and
 and maps eight areas: four detection and four interference areas. There are no dwell areas.
 
 Browsers fetch module scripts with CORS, so whatever host serves the files must send an
-`Access-Control-Allow-Origin` header that admits the device's origin. jsDelivr does; a plain
+`Access-Control-Allow-Origin` header that admits the device's origin. jsDelivr does. A plain
 file server on your LAN usually does not.
 
-The URLs above target `main` as supplied in the installation examples. They only resolve
-once the files are published on that ref. Change the ref to your published branch, tag or
+The URLs above target `master`. Change the ref to your published branch, tag or
 commit when hosting your own copy. Pin a tested commit or tag for devices that need stable behaviour.
 
 ## Delivering configuration
@@ -250,13 +277,29 @@ npm test
 ```
 
 The suite uses Node's test runner and jsdom. Neither is needed on the device or in the browser.
-There is no build step. To inspect the simulated fixture:
+To serve the interactive demo and the test fixture:
 
 ```sh
 python3 -m http.server 8765 --bind 127.0.0.1
 ```
 
-Open `http://127.0.0.1:8765/tests/fixtures/coordinate-editor.html`.
+Open `http://127.0.0.1:8765/demo/` for the live simulator. Motion advances every 250 ms.
+Pause freezes simulation time while editing remains available. Reduced motion starts the
+simulation paused. Reset and preset switching rebuild the editor and cancel simulated
+confirmations. The staged transport updates actual values about 600 ms after Apply, then
+the editor confirms them by polling.
+
+Build the public Pages artefact with:
+
+```sh
+npm run build:demo
+```
+
+The build writes a clean `dist/` containing the demo, media, editor and required example
+modules. GitHub Pages deploys that directory from `master` through the Pages workflow.
+Device installation still uses the original editor and configuration files directly.
+
+Open `http://127.0.0.1:8765/tests/fixtures/coordinate-editor.html` for the diagnostic fixture.
 Use `?mode=direct`, `?mode=staged` or `?mode=readonly` to isolate a mode.
 The fixture deliberately leaves staged writes unconfirmed until `fixtureConfirm()` is called
 in the browser console, so its shorter 1.5-second deadline can be inspected.

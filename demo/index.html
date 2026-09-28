@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Try the ESPHome coordinate editor with simulated LD2450, LD6004 and LD6002B target data." />
+    <title>ESPHome coordinate editor - live demo</title>
+    <link rel="stylesheet" href="showcase.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <main class="showcase">
+      <header class="intro">
+        <div class="heading">
+          <h1>ESPHome coordinate editor</h1>
+          <span class="tag">Simulated data</span>
+        </div>
+        <p class="lead">Move a zone, resize a corner or type exact bounds. Try the sensor mappings below.</p>
+        <div class="toolbar" aria-label="Simulation controls">
+          <label for="preset">Sensor</label>
+          <select id="preset" disabled>
+            <option value="ld6004">LD6004 - 3D</option>
+            <option value="ld2450">LD2450 - 2D</option>
+            <option value="ld6002b">LD6002B - 3D</option>
+          </select>
+          <button id="pause" type="button" disabled>Pause</button>
+          <button id="reset" type="button" disabled>Reset</button>
+          <span id="simulation-status" role="status">Loading editor</span>
+          <a href="walkthrough.html">Watch the walkthrough</a>
+        </div>
+        <p id="preset-detail" class="hint">All entity reads and writes stay in this browser. No device connection.</p>
+      </header>
+      <iframe id="editor-frame" title="Coordinate editor with simulated radar targets" src="frame.html" scrolling="no"></iframe>
+      <p class="footnote">Reset and sensor switching discard local edits. Three simulated target slots, with pauses and presence changes. Apply updates simulated entity values. Hardware confirmation is unavailable.</p>
+      <footer><a href="https://github.com/wolph/esphome-coordinate-editor#quick-start">Use it on your device</a><a href="https://github.com/wolph/esphome-coordinate-editor">Source and documentation</a></footer>
+      <noscript>This demo needs JavaScript to run the editor and simulated targets.</noscript>
+    </main>
+  </body>
+</html>

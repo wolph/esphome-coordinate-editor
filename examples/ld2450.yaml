@@ -13,8 +13,8 @@ ld2450:
 web_server:
   version: 3
   js_extra_urls:
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@main/coordinate-editor.js
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@main/examples/ld2450-config.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@master/coordinate-editor.js
+    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@master/examples/ld2450-config.js
 
 sensor:
   - platform: ld2450
