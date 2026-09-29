@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 /** @type {string} */
 export const root = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 /** @type {Record<string, string>} */
-const mime = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".gif": "image/gif", ".mp4": "video/mp4", ".vtt": "text/vtt" };
+const mime = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".gif": "image/gif", ".mp4": "video/mp4", ".vtt": "text/vtt" };
 
 /** Serve only repository files on an owned random loopback port.
  * @returns {Promise<{url: string, close: () => Promise<void>}>}

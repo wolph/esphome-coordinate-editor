@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://wolph.github.io/esphome-coordinate-editor/walkthrough.html">
-    <img src="https://wolph.github.io/esphome-coordinate-editor/media/preview.gif" alt="Simulated targets moving through zones in the ESPHome coordinate editor" width="960" />
+    <img src="https://wolph.github.io/esphome-coordinate-editor/media/preview.svg" alt="Simulated 3D targets, camera orbit and zone editing in the ESPHome coordinate editor" width="960" />
   </a>
 </p>
 
@@ -307,7 +307,8 @@ npm run check:demo
 The browser check starts its own temporary loopback server and uses the actual editor and
 simulator. It checks 3D orbit and zoom, cube selection, face movement, edge resizing and
 clamped XYZ arrows, local drafts, staged and direct Apply, Discard, Top view, pause and resume,
-all sensor presets, reduced motion and desktop, tablet and mobile layouts. Entity requests stay in memory. Console errors fail the check.
+all sensor presets, reduced motion and desktop, tablet and mobile layouts. It also checks SVG
+image animation and its static reduced-motion fallback. Entity requests stay in memory. Console errors fail the check.
 The Pages workflow runs this check before building the site.
 
 Install `ffmpeg` with your system package manager (`brew install ffmpeg` on macOS or
@@ -318,10 +319,14 @@ npm run record:demo
 ```
 
 The recorder uses the same browser interactions with presentation holds. It creates a
-1440x1200 H264 walkthrough, a 12-second GIF preview, a poster and English captions in
-`demo/media/`. Caption times follow the recorded interactions, including pending and
-confirmed staged values. All footage uses simulated data. The recorder closes its own
-browser and server and removes temporary capture files.
+cropped H264 walkthrough, a 19-second SVG preview, a poster and English captions in
+`demo/media/`. The SVG records the editor's actual vector layers at ten frames per second,
+showing only the 3D scene. It shares unchanged layers and plays without JavaScript or embedded
+bitmap images. Reduced motion shows a static frame. Click the preview for the full video.
+The video and poster show only the editor, leaving the page margins, sensor selector and
+other demo controls outside the crop. Caption times follow the recorded
+interactions, including pending and confirmed staged values. All footage uses simulated data.
+The recorder closes its own browser and server and removes temporary capture files.
 
 To serve the interactive demo and the test fixture:
 
