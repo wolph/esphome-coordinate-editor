@@ -62,8 +62,8 @@ XY-only zones in an XYZ configuration appear as labelled floor footprints.
 
 > [!NOTE]
 > The installation examples pin `v0.1.0`, which uses an X/Y map.
-> For the 3D controls shown above, replace `@v0.1.0` in both module URLs with
-> `@6b1c01030290a35acb5c04eac44204fc30bca779` to use this tested preview.
+> For the current controls and sensor mappings shown above, replace `@v0.1.0` in both module URLs with
+> `@664b1e6f498e5233a781f41524ce039f33c426b6` to use this tested preview.
 
 Merge one of the example YAML files into your device configuration, set its UART pins,
 and retain your board, network and authentication settings. The YAML files are fragments,
