@@ -72,7 +72,12 @@ async function rectangleDrag(sequence, selector, dx, dy) {
 async function enterBound(sequence, label, value) {
   /** @type {import('playwright').Locator} */
   const input = editorFrame(sequence.page).locator("fieldset:not([hidden])").getByLabel(label, { exact: true });
+  if (sequence.recording) {
+    await input.click();
+    await sequence.page.waitForTimeout(300);
+  }
   await input.fill(value);
+  if (sequence.recording) await sequence.page.waitForTimeout(500);
   await input.press("Tab");
   assertBounds(await snapshot(sequence.page));
 }
@@ -88,6 +93,7 @@ async function orbitAndZoom(sequence) {
   assert.notEqual((await snapshot(sequence.page)).camera.yaw, before.camera.yaw, "Orbit changes yaw");
   await editorFrame(sequence.page).getByRole("button", { name: "Zoom in", exact: true }).click();
   assert.ok((await snapshot(sequence.page)).camera.zoom > before.camera.zoom, "Zoom changes camera scale");
+  if (sequence.recording) await sequence.page.waitForTimeout(500);
   await editorFrame(sequence.page).getByRole("button", { name: "Zoom out", exact: true }).click();
   assert.equal((await snapshot(sequence.page)).dirty, false, "Camera controls do not edit bounds");
 }
@@ -230,17 +236,20 @@ async function stagedApply(sequence) {
 async function discardAndFit(sequence) {
   await enterBound(sequence, "Z Max (m)", "3.8");
   assert.equal((await snapshot(sequence.page)).dirty, true);
+  if (sequence.recording) await sequence.page.waitForTimeout(1200);
   await editorFrame(sequence.page).getByRole("button", { name: "Discard draft", exact: true }).filter({ visible: true }).click();
   /** @type {any} */
   const discarded = await snapshot(sequence.page);
   assert.equal(discarded.dirty, false);
   assert.deepEqual(discarded.draft, discarded.actual, "Discard restores actual bounds");
+  if (sequence.recording) await sequence.page.waitForTimeout(500);
   await editorFrame(sequence.page).getByRole("button", { name: "Fit view", exact: true }).click();
 }
 
 /** @param {Sequence} sequence @returns {Promise<void>} */
 async function topView(sequence) {
   await editorFrame(sequence.page).getByRole("button", { name: "Top view", exact: true }).click();
+  if (sequence.recording) await sequence.page.waitForTimeout(700);
   /** @type {any} */
   const before = await snapshot(sequence.page);
   await rectangleDrag(sequence, "rect.hit", 35, -20);

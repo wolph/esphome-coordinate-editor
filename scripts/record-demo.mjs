@@ -96,7 +96,7 @@ async function exportMedia(video, media, cues, crop) {
   assert.ok(Number(metadata.format.duration) >= 45 && Number(metadata.format.duration) <= 60);
   /** @type {number} */
   const previewBytes = (await stat(path.join(media, "preview.svg"))).size;
-  assert.ok(previewBytes <= 1024 * 1024, `SVG preview remains below 1 MiB (${previewBytes} bytes)`);
+  assert.ok(previewBytes <= 3 * 1024 * 1024, `SVG preview remains below 3 MiB (${previewBytes} bytes)`);
   console.log(`Recorded ${Number(metadata.format.duration).toFixed(2)}s, ${crop.width}x${crop.height}, H264/yuv420p. Captions follow observed interaction times.`);
 }
 

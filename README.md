@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://wolph.github.io/esphome-coordinate-editor/walkthrough.html">
-    <img src="https://wolph.github.io/esphome-coordinate-editor/media/preview.svg" alt="Simulated 3D targets, camera orbit and zone editing in the ESPHome coordinate editor" width="960" />
+    <img src="https://wolph.github.io/esphome-coordinate-editor/media/preview.svg?v=full-editor" alt="ESPHome coordinate editor: drag zones, enter bounds, Apply, Discard and switch to Top view" width="960" />
   </a>
 </p>
 
@@ -319,10 +319,12 @@ npm run record:demo
 ```
 
 The recorder uses the same browser interactions with presentation holds. It creates a
-cropped H264 walkthrough, a 19-second SVG preview, a poster and English captions in
-`demo/media/`. The SVG records the editor's actual vector layers at ten frames per second,
-showing only the 3D scene. It shares unchanged layers and plays without JavaScript or embedded
-bitmap images. Reduced motion shows a static frame. Click the preview for the full video.
+cropped H264 walkthrough, a 35-second SVG preview, a poster and English captions in
+`demo/media/`. The SVG records the editor's vector layers and HTML controls at ten frames per
+second, including the pointer, live input values, Apply, Discard and Top view. The controls use
+SVG `foreignObject` elements with the recorded desktop layout. It shares unchanged layers and
+plays without JavaScript or embedded bitmap images. Reduced motion shows a static frame.
+Click the preview for the full video.
 The video and poster show only the editor, leaving the page margins, sensor selector and
 other demo controls outside the crop. Caption times follow the recorded
 interactions, including pending and confirmed staged values. All footage uses simulated data.
