@@ -660,3 +660,78 @@ test("matching read-back after a competing pending update still requires review"
     assert.equal(zone.draft.x_min, -2);
   } finally { editor.disconnectedCallback(); dom.window.close(); }
 });
+
+/** @returns {ReturnType<typeof setup> & {second: Record<string, any>}} */
+function twoRectangles() {
+  /** @type {ReturnType<typeof setup>} */
+  const state = setup();
+  /** @type {Record<string, any>} */
+  const second = {
+    definition: { ...state.zone.definition, label: "Second area" },
+    available: true,
+    actual: { x_min: 4, x_max: 6, y_min: 4, y_max: 6 },
+    draft: { x_min: 4, x_max: 6, y_min: 4, y_max: 6 },
+    dirty: false,
+  };
+  state.editor.zones.push(second);
+  state.editor.refresh = state.dom.window.CoordinateEditor.prototype.refresh;
+  state.editor.draw();
+  state.editor.pointer = (event) => ({ x: event.clientX, y: event.clientY });
+  state.editor.svg.setPointerCapture = () => {};
+  state.editor.svg.hasPointerCapture = () => true;
+  state.editor.svg.releasePointerCapture = () => {};
+  return { ...state, second };
+}
+
+test("an unselected 2D rectangle selects and moves its existing draft in one gesture", () => {
+  /** @type {ReturnType<typeof twoRectangles>} */
+  const { dom, editor, zone, second } = twoRectangles();
+  /** @type {Record<string, number>} */
+  const firstDraft = { ...zone.draft };
+  second.draft = { ...second.draft, x_min: 5, x_max: 7 };
+  second.dirty = true;
+  second.message = "Existing draft";
+  editor.refresh();
+  /** @type {Record<string, number>} */
+  const originalDraft = { ...second.draft };
+  /** @type {number} */
+  let writes = 0;
+  editor.request = async () => { writes++; };
+  editor.startGesture({ button: 0, target: editor.zoneLayer.querySelectorAll("rect")[1],
+    pointerId: 7, clientX: 5, clientY: 5, preventDefault() {} });
+  assert.equal(editor.selected, 1);
+  assert.equal(editor.drag.zone, second);
+  assert.equal(editor.forms[1].group.hidden, false);
+  editor.refresh();
+  editor.updateGesture({ pointerId: 7, clientX: 6, clientY: 4.5 });
+  assert.deepEqual({ ...second.draft }, { x_min: 6, x_max: 8, y_min: 3.5, y_max: 5.5 });
+  assert.deepEqual({ ...zone.draft }, firstDraft);
+  assert.deepEqual(second.actual, { x_min: 4, x_max: 6, y_min: 4, y_max: 6 });
+  assert.equal(writes, 0);
+  editor.endGesture({ pointerId: 7 }, true);
+  assert.deepEqual({ ...second.draft }, originalDraft);
+  assert.equal(second.dirty, true);
+  assert.equal(second.message, "Existing draft");
+  assert.equal(editor.drag, null);
+  dom.window.close();
+});
+
+for (const mode of ["editable", "read-only", "pending", "busy"]) {
+  test(`clicking an unselected ${mode} 2D rectangle selects it without changing bounds`, () => {
+    /** @type {ReturnType<typeof twoRectangles>} */
+    const { dom, editor, second } = twoRectangles();
+    if (mode === "read-only") delete second.definition.write;
+    if (mode === "pending") second.pending = { ...second.draft };
+    if (mode === "busy") editor.busy = true;
+    editor.refresh();
+    editor.startGesture({ button: 0, target: editor.zoneLayer.querySelectorAll("rect")[1],
+      pointerId: 7, clientX: 5, clientY: 5, preventDefault() {} });
+    assert.equal(editor.selected, 1);
+    if (mode !== "editable") assert.ok(!editor.drag);
+    editor.endGesture({ pointerId: 7 }, false);
+    assert.deepEqual(second.draft, second.actual);
+    assert.equal(second.dirty, false);
+    assert.equal(editor.forms[1].group.hidden, false);
+    dom.window.close();
+  });
+}

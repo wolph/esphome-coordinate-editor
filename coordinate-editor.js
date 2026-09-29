@@ -1311,12 +1311,21 @@ class CoordinateEditor extends HTMLElement {
     event.preventDefault();
     this.refresh();
   }
+  /** @param {PointerEvent} event @returns {void} */
   startGesture(event) {
     if (this.viewMode === "3d") return this.startSpatialGesture(event);
-    const zone = this.zones[this.selected];
-    if (event.button !== 0 || !this.editable(zone) || this.drag) return;
+    if (event.button !== 0 || this.drag) return;
+    /** @type {string[] | undefined} */
     const corner = event.target.dataset.corner?.split(",");
-    if (!corner && !event.target.classList.contains("hit")) return;
+    /** @type {string | undefined} */
+    const index = event.target.dataset.zone;
+    if (!corner && index === undefined && !event.target.classList.contains("hit")) return;
+    if (index !== undefined) this.selected = Number(index);
+    /** @type {object | undefined} */
+    const zone = this.zones[this.selected];
+    this.refresh();
+    if (!this.editable(zone)) { event.preventDefault(); return; }
+    /** @type {ScreenPoint | null} */
     const point = this.pointer(event);
     if (!point) return;
     this.drag = {
@@ -1550,7 +1559,7 @@ class CoordinateEditor extends HTMLElement {
     const signature = JSON.stringify([
       this.selected,
       this.busy,
-      this.zones.map((zone) => [zone.actual, zone.draft, zone.dirty, zone.available, zone.pending]),
+      this.zones.map((zone) => [zone.actual, zone.draft, zone.dirty, zone.available, zone.pending, zone.conflict]),
     ]);
     if (signature === this.zoneSignature) return;
     this.zoneSignature = signature;
@@ -1570,7 +1579,9 @@ class CoordinateEditor extends HTMLElement {
       );
     this.zones.forEach((zone, index) => {
       if (!zone.actual || !Object.values(zone.actual).every(Number.isFinite)) return;
-      rectangle(zone.actual, { fill: `${colour(index)}15`, stroke: colour(index), "stroke-width": 2 });
+      rectangle(zone.actual, { fill: `${colour(index)}15`, stroke: colour(index), "stroke-width": 2,
+        "data-zone": index, "data-draft": false, "pointer-events": "all",
+        style: `cursor:${this.editable(zone) ? "move" : "pointer"}` });
       this.shape(
         "text",
         {
@@ -1586,13 +1597,16 @@ class CoordinateEditor extends HTMLElement {
     const zone = this.zones[this.selected];
     if (!zone?.draft || !Object.values(zone.draft).every(Number.isFinite)) return;
     rectangle(zone.draft, {
+      "data-zone": this.selected,
+      "data-draft": true,
+      style: `cursor:${this.editable(zone) ? "move" : "pointer"}`,
       fill: `${colour(this.selected)}20`,
       stroke: colour(this.selected),
       "stroke-width": 2,
       "stroke-dasharray": zone.dirty ? "6 4" : "none",
     });
     if (!this.editable(zone)) return;
-    rectangle(zone.draft, { class: "hit" });
+    rectangle(zone.draft, { class: "hit", "data-zone": this.selected });
     for (const x of ["min", "max"])
       for (const y of ["min", "max"]) {
         this.shape(

@@ -274,9 +274,9 @@ async function directApply(sequence) {
   await waitReady(sequence.page, "ld2450");
   assert.equal((await snapshot(sequence.page)).view, "top");
   assert.equal((await snapshot(sequence.page)).zoneCount, 3);
-  await editorFrame(sequence.page).getByRole("button", { name: "Zone 3", exact: true }).click();
-  assert.equal((await snapshot(sequence.page)).selected, 2);
-  await rectangleDrag(sequence, "rect.hit", 25, -20);
+  assert.equal((await snapshot(sequence.page)).selected, 0);
+  await rectangleDrag(sequence, "rect[data-zone='2'][data-draft='false']", 25, -20);
+  assert.equal((await snapshot(sequence.page)).selected, 2, "Dragging an unselected 2D rectangle selects its zone");
   await enterBound(sequence, "X Max (m)", "1.2");
   /** @type {any} */
   const before = await snapshot(sequence.page);
