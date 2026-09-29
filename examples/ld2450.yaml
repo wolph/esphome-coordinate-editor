@@ -39,3 +39,21 @@ number:
         name: "Zone Y Min"
       y2:
         name: "Zone Y Max"
+    zone_2:
+      x1:
+        name: "Zone 2 X Min"
+      x2:
+        name: "Zone 2 X Max"
+      y1:
+        name: "Zone 2 Y Min"
+      y2:
+        name: "Zone 2 Y Max"
+    zone_3:
+      x1:
+        name: "Zone 3 X Min"
+      x2:
+        name: "Zone 3 X Max"
+      y1:
+        name: "Zone 3 Y Min"
+      y2:
+        name: "Zone 3 Y Max"

@@ -27,7 +27,7 @@ Reset and sensor switching discard local edits. All demo entity reads and writes
 
 | Sensor mapping | Coordinates | Areas in the example | Writes |
 | --- | --- | --- | --- |
-| [LD2450](examples/ld2450.yaml) | 2D, millimetres displayed as metres | One zone | Direct bound writes |
+| [LD2450](examples/ld2450.yaml) | 2D, millimetres displayed as metres | Three zones | Direct bound writes |
 | [LD6004](examples/ld6004.yaml) | 3D, metres | Four detection areas | Staging numbers and area Apply button |
 | [LD6002B](examples/ld6002b.yaml) | 3D, metres | Four detection and four interference areas | Staging numbers and area Apply button |
 
@@ -86,9 +86,10 @@ web_server:
     - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/examples/ld2450-config.js
 ```
 
-[ld2450-config.js](examples/ld2450-config.js) maps `Target X`, `Target Y` and four zone number
-entities. LD2450 reports millimetres. The mapping uses `scale: 0.001` to display metres and
-convert edited bounds back to millimetres. It omits `axes.z` and all Z references.
+[ld2450-config.js](examples/ld2450-config.js) maps `Target X`, `Target Y` and four number
+entities per zone across all three zones. LD2450 reports millimetres. The mapping uses
+`scale: 0.001` to display metres and convert edited bounds back to millimetres.
+It omits `axes.z` and all Z references.
 Configure the LD2450 zone mode separately. Each of the four bound writes takes effect independently.
 
 ### LD6004: 3D, staged writes

@@ -15,15 +15,25 @@ window.coordinateEditorConfig = {
     x: coordinateRef("sensor", "Target X"),
     y: coordinateRef("sensor", "Target Y"),
   }],
-  zones: [{
-    label: "Zone 1",
-    bounds: {
-      x_min: coordinateRef("number", "Zone X Min"),
-      x_max: coordinateRef("number", "Zone X Max"),
-      y_min: coordinateRef("number", "Zone Y Min"),
-      y_max: coordinateRef("number", "Zone Y Max"),
+  zones: [1, 2, 3].map(
+    /** @param {number} zoneNumber
+     * @returns {{label: string, bounds: Record<string, {domain: string, id: string, scale: number}>, write: string}}
+     */
+    (zoneNumber) => {
+      // Keep the original Zone 1 entity names compatible with existing devices.
+      /** @type {string} */
+      const prefix = zoneNumber === 1 ? "Zone" : `Zone ${zoneNumber}`;
+      return {
+        label: `Zone ${zoneNumber}`,
+        bounds: {
+          x_min: coordinateRef("number", `${prefix} X Min`),
+          x_max: coordinateRef("number", `${prefix} X Max`),
+          y_min: coordinateRef("number", `${prefix} Y Min`),
+          y_max: coordinateRef("number", `${prefix} Y Max`),
+        },
+        write: "direct",
+      };
     },
-    write: "direct",
-  }],
+  ),
 };
 window.dispatchEvent(new Event("coordinate-editor-config"));

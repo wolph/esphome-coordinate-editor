@@ -4,9 +4,9 @@
 
 /** @type {import('./types.js').Preset[]} */
 export const PRESETS = [
-  { id: "ld6004", label: "LD6004", detail: "3D coordinates, four detection areas, staged writes" },
-  { id: "ld2450", label: "LD2450", detail: "2D coordinates, one zone, direct writes from metres to millimetres" },
+  { id: "ld2450", label: "LD2450", detail: "2D coordinates, three zones, direct writes from metres to millimetres" },
   { id: "ld6002b", label: "LD6002B", detail: "3D coordinates, four detection and four interference areas, staged writes" },
+  { id: "ld6004", label: "LD6004", detail: "3D coordinates, four detection areas, staged writes" },
 ];
 
 /** @type {Map<string, EditorConfig>} */

@@ -273,20 +273,22 @@ async function directApply(sequence) {
   await sequence.page.selectOption("#preset", "ld2450");
   await waitReady(sequence.page, "ld2450");
   assert.equal((await snapshot(sequence.page)).view, "top");
-  assert.equal((await snapshot(sequence.page)).zoneCount, 1);
+  assert.equal((await snapshot(sequence.page)).zoneCount, 3);
+  await editorFrame(sequence.page).getByRole("button", { name: "Zone 3", exact: true }).click();
+  assert.equal((await snapshot(sequence.page)).selected, 2);
   await rectangleDrag(sequence, "rect.hit", 25, -20);
   await enterBound(sequence, "X Max (m)", "1.2");
   /** @type {any} */
   const before = await snapshot(sequence.page);
   assert.equal(before.write, "direct");
-  await editorFrame(sequence.page).locator("button.primary").click();
-  await editorFrame(sequence.page).waitForFunction(() => !window.demoFrame.editor.zones[0].dirty && !window.demoFrame.editor.busy);
+  await editorFrame(sequence.page).locator("fieldset:not([hidden]) button.primary").click();
+  await editorFrame(sequence.page).waitForFunction(() => !window.demoFrame.editor.zones[2].dirty && !window.demoFrame.editor.busy);
   assert.deepEqual((await snapshot(sequence.page)).actual, before.draft, "Direct Apply agrees with the full draft");
   assert.equal(await editorFrame(sequence.page).evaluate(() => {
     /** @type {object} */
     const app = window.demoFrame;
     /** @type {object} */
-    const zone = app.editor.zones[0];
+    const zone = app.editor.zones[2];
     return Object.entries(zone.definition.bounds).every(([key, ref]) =>
       app.simulator.values.get(`${ref.domain}/${ref.id}`) === zone.actual[key] / ref.scale);
   }), true, "LD2450 writes metre bounds as scaled entity values");
@@ -310,6 +312,10 @@ async function interferenceArea(sequence) {
  * @param {Sequence} sequence @returns {Promise<void>}
  */
 export async function runSequence(sequence) {
+  /** @type {string[]} */
+  const sensorNames = await sequence.page.locator("#preset option").allTextContents();
+  assert.deepEqual(sensorNames, [...sensorNames].sort((first, second) => first.localeCompare(second, "en", { numeric: true })),
+    "Sensor choices are sorted by model name");
   await shot(sequence, 5, "Simulated XYZ targets move through four LD6004 detection cuboids. Drop-lines show height above the floor.", async () => {
     /** @type {any} */
     const first = await snapshot(sequence.page);
@@ -325,7 +331,7 @@ export async function runSequence(sequence) {
   await shot(sequence, 4, "A further height edit stays local. Discard restores actual values, and Fit adjusts the camera.", () => discardAndFit(sequence));
   await shot(sequence, 6, "Top view edits the same zone as a rectangle. Drag its centre to move and a corner to resize.", () => topView(sequence));
   await shot(sequence, 4, "Pause freezes target motion while precise editing remains available. Resume starts motion again.", () => pauseResume(sequence));
-  await shot(sequence, 6, "LD2450 uses a 2D map and direct writes. Apply updates the simulated millimetre entities from metre bounds.", () => directApply(sequence));
+  await shot(sequence, 6, "LD2450 has three 2D zones. Select Zone 3 and Apply to update its simulated millimetre entities from metre bounds.", () => directApply(sequence));
   await shot(sequence, 6, "LD6002B adds four interference areas. Select Interference 0 and resize its height and X bound precisely with axis arrows.", () => interferenceArea(sequence));
   await shot(sequence, 3, "Reset clears local edits and restores the simulated sensor mapping. Try the interactive demo.", async () => {
     await sequence.page.getByRole("button", { name: "Reset", exact: true }).click();

@@ -157,7 +157,7 @@ for (const sensor of ["ld2450", "ld6004", "ld6002b"]) {
       await settle(dom);
       const editor = dom.window.document.querySelector("coordinate-editor");
       assert.ok(editor.shadowRoot.querySelector("h2"));
-      assert.equal(example.zones.length, sensor === "ld2450" ? 1 : sensor === "ld6004" ? 4 : 8);
+      assert.equal(example.zones.length, sensor === "ld2450" ? 3 : sensor === "ld6004" ? 4 : 8);
       assert.equal(Object.keys(editor.forms[0].controls).length, sensor === "ld2450" ? 4 : 6);
       assert.equal(Boolean(example.axes.z), sensor !== "ld2450");
       assert.equal(example.zones[0].write, sensor === "ld2450" ? "direct" : "staged");

@@ -127,18 +127,23 @@ test("seeded motion repeats, pauses, changes presence and stays inside every axi
   assert.equal(await raw(first, first.config.targets[0].x), initial);
 });
 
-test("LD2450 direct REST writes retain millimetres and work while paused", async () => {
+test("all three LD2450 zones write independently in millimetres while paused", async () => {
   /** @type {Simulator} */
   const simulator = await device("ld2450", { paused: true });
-  /** @type {import('../demo/types.js').Reference} */
-  const ref = simulator.config.zones[0].bounds.x_min;
-  assert.equal(ref.scale, 0.001);
-  assert.equal((await write(simulator, ref, -2500)).status, 200);
-  assert.equal(await raw(simulator, ref), -2500);
-  simulator.tick();
-  assert.equal(await raw(simulator, ref), -2500);
+  assert.equal(simulator.config.zones.length, 3);
+  /** @type {import('../demo/types.js').Reference[]} */
+  const refs = simulator.config.zones.map((zone) => zone.bounds.x_min);
+  /** @type {number[]} */
+  const expected = await Promise.all(refs.map((ref) => raw(simulator, ref)));
+  for (const [index, ref] of refs.entries()) {
+    assert.equal(ref.scale, 0.001);
+    expected[index] = -2500 + index * 100;
+    assert.equal((await write(simulator, ref, expected[index])).status, 200);
+    simulator.tick();
+    assert.deepEqual(await Promise.all(refs.map((ref) => raw(simulator, ref))), expected);
+  }
   simulator.reset();
-  assert.notEqual(await raw(simulator, ref), -2500);
+  for (const [index, ref] of refs.entries()) assert.notEqual(await raw(simulator, ref), expected[index]);
 });
 
 test("staged writes confirm only after Apply and the 600 ms transport delay", async () => {
