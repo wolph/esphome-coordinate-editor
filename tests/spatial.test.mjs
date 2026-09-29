@@ -161,11 +161,11 @@ test("single-face resizing snaps relative to minimum and forbids inverted or zer
   dom.window.close();
 });
 
-test("axis move is local and incoming target redraw preserves the active handle", () => {
+test("axis resize is local and incoming target redraw preserves the active handle", () => {
   /** @type {TestContext} */
   const { dom, editor, zone } = setup();
   /** @type {SVGElement} */
-  const handle = editor.svg.querySelector("[data-axis='z'][data-edge='move']");
+  const handle = editor.svg.querySelector("[data-axis='z'][data-edge='max']");
   assert.ok(handle);
   /** @type {number} */
   let writes = 0;
@@ -174,12 +174,12 @@ test("axis move is local and incoming target redraw preserves the active handle"
   const vector = editor.spatial.axisVector("z");
   editor.startGesture(pointer(handle));
   editor.updateGesture(pointer(handle, vector.x * 0.3, vector.y * 0.3));
-  assert.equal(zone.draft.z_min, 0.8);
+  assert.equal(zone.draft.z_min, 0.5);
   assert.equal(zone.draft.z_max, 2.3);
   assert.equal(zone.actual.z_min, 0.5);
   editor.targets = [target("Moving", 1)];
   editor.refresh();
-  assert.equal(editor.svg.querySelector("[data-axis='z'][data-edge='move']"), handle);
+  assert.equal(editor.svg.querySelector("[data-axis='z'][data-edge='max']"), handle);
   assert.equal(writes, 0);
   assert.equal(editor.forms[0].apply.disabled, true);
   editor.endGesture({ pointerId: 7 }, false);
@@ -190,7 +190,6 @@ test("axis move is local and incoming target redraw preserves the active handle"
 test("face handles resize only the selected bound and cancellation restores the prior draft", () => {
   /** @type {TestContext} */
   const { dom, editor, zone } = setup();
-  editor.setManipulationMode("resize");
   /** @type {SVGElement} */
   const handle = editor.svg.querySelector("[data-axis='z'][data-edge='max']");
   assert.ok(handle);
@@ -282,7 +281,7 @@ test("polling actual bounds keeps a captured spatial handle alive and pointercan
   /** @type {TestContext} */
   const { dom, editor, zone } = setup();
   /** @type {SVGElement} */
-  const handle = editor.svg.querySelector("[data-axis='z'][data-edge='move']");
+  const handle = editor.svg.querySelector("[data-axis='z'][data-edge='max']");
   /** @type {{x: number, y: number}} */
   const vector = editor.spatial.axisVector("z");
   /** @type {(bounds: TestBounds) => void} */
@@ -294,8 +293,8 @@ test("polling actual bounds keeps a captured spatial handle alive and pointercan
   editor.updateGesture(pointer(handle, vector.x * 0.3, vector.y * 0.3));
   release({ ...zone.actual, x_min: -1.2 });
   await polling;
-  assert.equal(editor.svg.querySelector("[data-axis='z'][data-edge='move']"), handle);
-  assert.equal(zone.draft.z_min, 0.8);
+  assert.equal(editor.svg.querySelector("[data-axis='z'][data-edge='max']"), handle);
+  assert.equal(zone.draft.z_min, 0.5);
   assert.equal(zone.conflict, true);
   editor.svg.onpointercancel({ pointerId: 7 });
   assert.equal(zone.draft.z_min, 0.5);
@@ -313,7 +312,7 @@ test("switching view and disposal release captured drags and their event handler
   let released = 0;
   editor.svg.releasePointerCapture = () => { released++; };
   /** @type {SVGElement} */
-  const handle = editor.svg.querySelector("[data-axis='z'][data-edge='move']");
+  const handle = editor.svg.querySelector("[data-axis='z'][data-edge='max']");
   /** @type {{x: number, y: number}} */
   const vector = editor.spatial.axisVector("z");
   editor.startGesture(pointer(handle));
@@ -365,7 +364,7 @@ test("XYZ handle edits reach six real REST number writes only after Apply", asyn
   };
   editor.controller = new dom.window.AbortController();
   /** @type {SVGElement} */
-  const handle = editor.svg.querySelector("[data-axis='z'][data-edge='move']");
+  const handle = editor.svg.querySelector("[data-axis='z'][data-edge='max']");
   /** @type {{x: number, y: number}} */
   const vector = editor.spatial.axisVector("z");
   editor.startGesture(pointer(handle));
@@ -374,15 +373,15 @@ test("XYZ handle edits reach six real REST number writes only after Apply", asyn
   assert.equal(posts.length, 0);
   await editor.apply(zone);
   assert.equal(posts.length, 6);
-  assert.equal(state.z_min, 0.8);
+  assert.equal(state.z_min, 0.5);
   assert.equal(state.z_max, 2.3);
-  assert.equal(zone.actual.z_min, 0.8);
+  assert.equal(zone.actual.z_min, 0.5);
   assert.equal(zone.dirty, false);
   assert.match(zone.message, /Entity values agree/);
   dom.window.close();
 });
 
-test("camera icons keep accessible names and editing mode labels", () => {
+test("camera icons keep accessible names and permanent resize handles", () => {
   /** @type {TestContext} */
   const { dom, editor } = setup();
   for (const [action, label] of [["zoom-in", "Zoom in"], ["zoom-out", "Zoom out"], ["fit-view", "Fit view"], ["reset-view", "Reset view"]]) {
@@ -392,8 +391,7 @@ test("camera icons keep accessible names and editing mode labels", () => {
     assert.equal(button.title, label);
     assert.equal(button.querySelector("svg").getAttribute("aria-hidden"), "true");
   }
-  for (const [attribute, value, label] of [["data-mode", "move", "Move"], ["data-mode", "resize", "Resize"],
-    ["data-view", "3d", "3D view"], ["data-view", "top", "Top view"]]) {
+  for (const [attribute, value, label] of [["data-view", "3d", "3D view"], ["data-view", "top", "Top view"]]) {
     /** @type {HTMLButtonElement} */
     const button = editor.shadowRoot.querySelector(`[${attribute}='${value}']`);
     assert.ok(button.querySelector("svg"));
@@ -465,4 +463,226 @@ test("orbit completion and cancellation enable working camera buttons before ano
     assert.equal(editor.spatial.camera.yaw, -0.65);
     dom.window.close();
   }
+});
+
+test("direct face picking selects the front surface and clicks leave the draft untouched", () => {
+  /** @type {TestContext} */
+  const { dom, editor, zone } = setup();
+  /** @type {{x:number,y:number}} */
+  const point = editor.spatial.project({ x: 0, y: 2, z: 2 });
+  /** @type {Record<string,any>} */
+  const hit = editor.spatial.pick(point);
+  assert.equal(hit.kind, "face");
+  assert.equal(hit.axis, "z");
+  editor.startGesture(pointer(editor.svg, point.x, point.y));
+  editor.updateGesture(pointer(editor.svg, point.x + 2, point.y));
+  editor.endGesture({ pointerId: 7 }, false);
+  assert.equal(zone.dirty, false);
+  assert.deepEqual(JSON.parse(JSON.stringify(zone.draft)), box);
+  dom.window.close();
+});
+
+test("plane inverse rejects singular projection and solves all face families", () => {
+  /** @type {TestContext} */
+  const { dom, editor } = setup();
+  for (const axes of [["x", "y"], ["y", "z"], ["x", "z"]]) {
+    /** @type {Array<{x:number,y:number}>} */
+    const vectors = axes.map((axis) => editor.spatial.axisVector(axis));
+    dom.window.vectors = vectors;
+    /** @type {number[]} */
+    const result = dom.window.eval("planeDisplacement({x:vectors[0].x*0.7+vectors[1].x*0.4,y:vectors[0].y*0.7+vectors[1].y*0.4},vectors)");
+    assert.ok(Math.abs(result[0] - 0.7) < 1e-8);
+    assert.ok(Math.abs(result[1] - 0.4) < 1e-8);
+  }
+  assert.equal(dom.window.eval("planeDisplacement({x:1,y:2},[{x:1,y:0},{x:1,y:0}])"), null);
+  dom.window.close();
+});
+
+for (const normal of ["x", "y", "z"]) test(`direct ${normal} face translates only its tangent plane`, () => {
+  /** @type {TestContext} */
+  const { dom, editor, zone } = setup();
+  editor.spatial.camera.scale = 100;
+  editor.refresh();
+  /** @type {Record<string,any>} */
+  const face = editor.spatial.surfaces().find((surface) => {
+    if (surface.kind !== "face" || surface.axis !== normal) return false;
+    /** @type {{x:number,y:number}} */
+    const centre = { x: surface.points.reduce((sum, point) => sum + point.x, 0) / 4,
+      y: surface.points.reduce((sum, point) => sum + point.y, 0) / 4 };
+    return editor.spatial.pick(centre)?.id === surface.id;
+  });
+  assert.ok(face, normal);
+  /** @type {{x:number,y:number}} */
+  const start = { x: face.points.reduce((sum, point) => sum + point.x, 0) / 4,
+    y: face.points.reduce((sum, point) => sum + point.y, 0) / 4 };
+  /** @type {Array<{x:number,y:number}>} */
+  const vectors = face.tangent.map((axis) => editor.spatial.axisVector(axis));
+  editor.startGesture(pointer(editor.svg, start.x, start.y));
+  editor.updateGesture(pointer(editor.svg, start.x + vectors[0].x * 0.3 + vectors[1].x * 0.2,
+    start.y + vectors[0].y * 0.3 + vectors[1].y * 0.2));
+  for (const axis of ["x", "y", "z"]) {
+    /** @type {number} */
+    const shift = axis === normal ? 0 : face.tangent.indexOf(axis) === 0 ? 0.3 : 0.2;
+    assert.ok(Math.abs(zone.draft[`${axis}_min`] - box[`${axis}_min`] - shift) < 1e-8);
+    assert.ok(Math.abs(zone.draft[`${axis}_max`] - box[`${axis}_max`] - shift) < 1e-8);
+  }
+  assert.equal(editor.orbit, undefined);
+  editor.endGesture({ pointerId: 7 }, false);
+  dom.window.close();
+});
+
+for (const direction of ["x", "y", "z"]) test(`direct ${direction} edge resizes its two meeting boundaries`, () => {
+  /** @type {TestContext} */
+  const { dom, editor, zone } = setup();
+  editor.spatial.camera.scale = 100;
+  editor.refresh();
+  /** @type {Record<string,any>} */
+  const edge = editor.spatial.surfaces().find((surface) => {
+    if (surface.kind !== "edge" || surface.axis !== direction) return false;
+    return editor.spatial.pick({ x: (surface.points[0].x + surface.points[1].x) / 2,
+      y: (surface.points[0].y + surface.points[1].y) / 2 })?.id === surface.id;
+  });
+  assert.ok(edge, direction);
+  /** @type {{x:number,y:number}} */
+  const start = { x: (edge.points[0].x + edge.points[1].x) / 2, y: (edge.points[0].y + edge.points[1].y) / 2 };
+  /** @type {Array<{x:number,y:number}>} */
+  const vectors = edge.tangent.map((axis) => editor.spatial.axisVector(axis));
+  editor.startGesture(pointer(editor.svg, start.x, start.y));
+  editor.updateGesture(pointer(editor.svg, start.x + vectors[0].x * 0.3 + vectors[1].x * 0.2,
+    start.y + vectors[0].y * 0.3 + vectors[1].y * 0.2));
+  for (const axis of ["x", "y", "z"]) for (const side of ["min", "max"]) {
+    /** @type {number} */
+    const shift = edge.boundaries[axis] === side ? edge.tangent.indexOf(axis) === 0 ? 0.3 : 0.2 : 0;
+    assert.ok(Math.abs(zone.draft[`${axis}_${side}`] - box[`${axis}_${side}`] - shift) < 1e-8, `${axis}_${side}`);
+  }
+  editor.endGesture({ pointerId: 7 }, true);
+  assert.deepEqual(JSON.parse(JSON.stringify(zone.draft)), box);
+  dom.window.close();
+});
+
+test("depth picking ignores a rear cube even when it is last in the DOM", () => {
+  /** @type {TestContext} */
+  const { dom, editor, zone } = setup();
+  /** @type {Record<string,any>} */
+  const camera = editor.spatial.camera;
+  /** @type {Record<string,number>} */
+  const away = { x: -Math.sin(camera.yaw) * Math.cos(camera.pitch) * 0.3,
+    y: -Math.cos(camera.yaw) * Math.cos(camera.pitch) * 0.3, z: -Math.sin(camera.pitch) * 0.3 };
+  /** @type {TestBounds} */
+  const rear = Object.fromEntries(Object.entries(box).map(([key, value]) => [key, value + away[key[0]]]));
+  editor.zones.push({ ...zone, actual: rear, draft: { ...rear } });
+  /** @type {{x:number,y:number}} */
+  const point = editor.spatial.project({ x: 0, y: 2, z: 2 });
+  assert.equal(editor.spatial.pick(point).index, 0);
+  dom.window.close();
+});
+
+test("read-only and busy cubes select without orbiting or drafting", () => {
+  for (const busy of [false, true]) {
+    /** @type {TestContext} */
+    const { dom, editor, zone } = setup();
+    editor.zones.unshift({ ...zone, actual: null, draft: null });
+    editor.selected = 0;
+    editor.busy = busy;
+    if (!busy) delete zone.definition.write;
+    /** @type {{x:number,y:number}} */
+    const point = editor.spatial.project({ x: 0, y: 2, z: 2 });
+    editor.startGesture(pointer(editor.svg, point.x, point.y));
+    assert.equal(editor.selected, 1);
+    assert.ok(!editor.drag && !editor.orbit);
+    assert.equal(zone.dirty, false);
+    dom.window.close();
+  }
+});
+
+test("original geometry gestures start from an existing draft and Escape restores it", () => {
+  /** @type {TestContext} */
+  const { dom, editor, zone } = setup();
+  editor.setDraft(zone, { ...box, x_min: 3, x_max: 5 });
+  /** @type {TestBounds} */
+  const before = { ...zone.draft };
+  /** @type {{x:number,y:number}} */
+  const point = editor.spatial.project({ x: 0, y: 2, z: 2 });
+  /** @type {{x:number,y:number}} */
+  const vector = editor.spatial.axisVector("y");
+  editor.startGesture(pointer(editor.svg, point.x, point.y));
+  editor.updateGesture(pointer(editor.svg, point.x + vector.x * 0.5, point.y + vector.y * 0.5));
+  assert.equal(zone.draft.x_min, 3);
+  assert.equal(zone.draft.y_min, 1.5);
+  editor.keyMove({ target: editor.svg, key: "Escape", preventDefault() {} });
+  assert.deepEqual(JSON.parse(JSON.stringify(zone.draft)), before);
+  assert.equal(zone.dirty, true);
+  dom.window.close();
+});
+
+test("hidden rear edges cannot win through a front face", () => {
+  /** @type {TestContext} */
+  const { dom, editor } = setup();
+  editor.spatial.camera.scale = 100;
+  editor.refresh();
+  /** @type {number} */
+  let hidden = 0;
+  for (const edge of editor.spatial.surfaces().filter((surface) => surface.kind === "edge")) {
+    /** @type {{x:number,y:number}} */
+    const midpoint = { x: (edge.points[0].x + edge.points[1].x) / 2,
+      y: (edge.points[0].y + edge.points[1].y) / 2 };
+    /** @type {number} */
+    const depth = (edge.points[0].depth + edge.points[1].depth) / 2;
+    dom.window.testPoint = midpoint;
+    dom.window.testFaces = editor.spatial.surfaces().filter((surface) => surface.kind === "face");
+    /** @type {number} */
+    const front = dom.window.eval("Math.max(...testFaces.map(face => faceDepth(testPoint, face) ?? -Infinity))");
+    if (front > depth + 1e-6) {
+      hidden++;
+      assert.notEqual(editor.spatial.pick(midpoint)?.id, edge.id);
+    }
+  }
+  assert.ok(hidden >= 3);
+  dom.window.close();
+});
+
+test("unselected face begins the same gesture and redraw cannot reset its starting draft", async () => {
+  /** @type {TestContext} */
+  const { dom, editor, zone } = setup();
+  editor.zones.unshift({ ...zone, actual: null, draft: null });
+  editor.selected = 0;
+  editor.refresh();
+  /** @type {{x:number,y:number}} */
+  const point = editor.spatial.project({ x: 0, y: 2, z: 2 });
+  /** @type {{x:number,y:number}} */
+  const vector = editor.spatial.axisVector("x");
+  editor.startGesture(pointer(editor.svg, point.x, point.y));
+  assert.equal(editor.selected, 1);
+  assert.equal(editor.drag.zone, zone);
+  editor.refresh();
+  editor.updateGesture(pointer(editor.svg, point.x + vector.x * 0.4, point.y + vector.y * 0.4));
+  assert.equal(zone.draft.x_min, -0.6);
+  editor.refresh();
+  editor.updateGesture(pointer(editor.svg, point.x + vector.x * 0.6, point.y + vector.y * 0.6));
+  assert.equal(zone.draft.x_min, -0.4);
+  assert.equal(zone.actual.x_min, -1);
+  editor.endGesture({ pointerId: 7 }, true);
+  assert.equal(zone.dirty, false);
+  dom.window.close();
+});
+
+test("threshold uses CSS pixels and permanent arrows retain 44 pixel targets", () => {
+  /** @type {TestContext} */
+  const { dom, editor, zone } = setup();
+  editor.displayScale = 2;
+  editor.refresh();
+  /** @type {SVGElement} */
+  const handle = editor.svg.querySelector("[data-axis='z'][data-edge='max']");
+  assert.equal(Number(handle.getAttribute("r")), 44);
+  assert.ok(handle.parentElement.querySelector("path"));
+  assert.equal(editor.shadowRoot.querySelectorAll("[data-mode]").length, 0);
+  editor.scenePointer = (event) => ({ x: event.clientX * 2, y: event.clientY * 2 });
+  editor.startGesture(pointer(handle));
+  editor.updateGesture(pointer(handle, 0, -3));
+  assert.equal(zone.dirty, false);
+  editor.updateGesture(pointer(handle, 0, -4));
+  assert.equal(zone.dirty, true);
+  editor.endGesture({ pointerId: 7 }, true);
+  assert.equal(zone.dirty, false);
+  dom.window.close();
 });

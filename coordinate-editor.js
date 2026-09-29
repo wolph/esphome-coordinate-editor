@@ -110,6 +110,67 @@ function spatialCorners(bounds) {
       for (const x of [bounds.x_min, bounds.x_max]) corners.push({ x, y, z });
   return corners;
 }
+/** Solve a locked projected tangent plane. Near edge-on planes have no stable solution.
+ * @param {ScreenPoint} delta @param {ScreenPoint[]} vectors @returns {number[] | null}
+ */
+function planeDisplacement(delta, vectors) {
+  /** @type {number} */
+  const determinant = vectors[0].x * vectors[1].y - vectors[1].x * vectors[0].y;
+  /** @type {number} */
+  const scale = Math.hypot(vectors[0].x, vectors[0].y) * Math.hypot(vectors[1].x, vectors[1].y);
+  if (!Number.isFinite(determinant) || scale < 1e-8 || Math.abs(determinant) < scale * 0.08) return null;
+  /** @type {number[]} */
+  const result = [(delta.x * vectors[1].y - delta.y * vectors[1].x) / determinant,
+    (vectors[0].x * delta.y - vectors[0].y * delta.x) / determinant];
+  return result.every(Number.isFinite) ? result : null;
+}
+/** Project real faces and edges with persistent geometric identities.
+ * @param {Bounds} bounds @param {SpatialCamera} camera @returns {object[]}
+ */
+function spatialSurfaces(bounds, camera) {
+  /** @type {object[]} */
+  const result = [];
+  /** @type {string[]} */
+  const axes = ["x", "y", "z"];
+  for (const axis of axes) {
+    /** @type {string[]} */
+    const tangent = axes.filter((key) => key !== axis);
+    if (!Number.isFinite(bounds.z_min) && axis !== "z") continue;
+    for (const edge of Number.isFinite(bounds.z_min) ? ["min", "max"] : ["min"]) {
+      /** @type {object[]} */
+      const points = [["min", "min"], ["max", "min"], ["max", "max"], ["min", "max"]].map((ends) =>
+        projectSpatial({ [axis]: bounds[`${axis}_${edge}`] ?? 0,
+          [tangent[0]]: bounds[`${tangent[0]}_${ends[0]}`], [tangent[1]]: bounds[`${tangent[1]}_${ends[1]}`] }, camera));
+      result.push({ kind: "face", axis, edge, points, tangent, id: `${axis}-${edge}` });
+    }
+    if (!Number.isFinite(bounds.z_min)) continue;
+    for (const first of ["min", "max"]) for (const second of ["min", "max"]) {
+      /** @type {Record<string,string>} */
+      const boundaries = { [tangent[0]]: first, [tangent[1]]: second };
+      /** @type {object[]} */
+      const points = ["min", "max"].map((edge) => projectSpatial({ [axis]: bounds[`${axis}_${edge}`],
+        [tangent[0]]: bounds[`${tangent[0]}_${first}`], [tangent[1]]: bounds[`${tangent[1]}_${second}`] }, camera));
+      result.push({ kind: "edge", axis, boundaries, tangent, points, id: `${axis}-${first}-${second}` });
+    }
+  }
+  return result;
+}
+/** Depth at a projected face point, including the boundary.
+ * @param {ScreenPoint} point @param {object} face @returns {number | null}
+ */
+function faceDepth(point, face) {
+  /** @type {object[]} */
+  const p = face.points;
+  /** @type {number} */
+  const determinant = (p[1].x - p[0].x) * (p[3].y - p[0].y) - (p[3].x - p[0].x) * (p[1].y - p[0].y);
+  if (Math.abs(determinant) < 1e-8) return null;
+  /** @type {number} */
+  const u = ((point.x - p[0].x) * (p[3].y - p[0].y) - (point.y - p[0].y) * (p[3].x - p[0].x)) / determinant;
+  /** @type {number} */
+  const v = ((p[1].x - p[0].x) * (point.y - p[0].y) - (p[1].y - p[0].y) * (point.x - p[0].x)) / determinant;
+  return u >= -1e-7 && u <= 1 + 1e-7 && v >= -1e-7 && v <= 1 + 1e-7 ?
+    p[0].depth + u * (p[1].depth - p[0].depth) + v * (p[3].depth - p[0].depth) : null;
+}
 function validate(config) {
   if (config.pendingTimeoutMs !== undefined &&
       (!Number.isFinite(config.pendingTimeoutMs) || config.pendingTimeoutMs <= 0 || config.pendingTimeoutMs > 2147483647))
@@ -313,6 +374,75 @@ class SpatialRenderer {
     editor.shape("text", { x: label.x + 8, y: label.y + 18, fill: "#526779", "font-size": 11 },
       editor.gridLayer).textContent = editor.config.originLabel || "Origin";
   }
+  /** @returns {object[]} */
+  surfaces() {
+    /** @type {object[]} */
+    const surfaces = [];
+    for (const [index, zone] of this.editor.zones.entries()) {
+      for (const [draft, bounds] of [[false, zone.actual], [true, zone.dirty ? zone.draft : null]]) {
+        if (!bounds || !Object.values(bounds).every(Number.isFinite)) continue;
+        surfaces.push(...spatialSurfaces(bounds, this.camera).map((surface) => ({ ...surface, index, draft })));
+      }
+    }
+    return surfaces;
+  }
+  /** Resolve overlapping handle hit circles independently of SVG insertion order.
+   * @param {ScreenPoint} point @returns {SVGElement | null}
+   */
+  pickHandle(point) {
+    /** @type {{node: SVGElement, distance: number}[]} */
+    const hits = [...this.editor.handleLayer.querySelectorAll("[data-axis]")].map((node) => ({ node,
+      distance: Math.hypot(point.x - Number(node.getAttribute("cx")), point.y - Number(node.getAttribute("cy"))) }))
+      .filter((hit) => hit.distance <= Number(hit.node.getAttribute("r")));
+    hits.sort((first, second) => first.distance - second.distance);
+    return hits[0]?.node || null;
+  }
+  /** Pick visible geometry by depth, allowing a CSS-pixel margin around exposed edges.
+   * @param {ScreenPoint} point @returns {object | null}
+   */
+  pick(point) {
+    /** @type {object[]} */
+    const surfaces = this.surfaces();
+    /** @type {object[]} */
+    const faces = surfaces.filter((surface) => surface.kind === "face");
+    /** @type {object[]} */
+    const hits = faces.map((face) => ({ ...face, depth: faceDepth(point, face) }))
+      .filter((face) => face.depth !== null).sort((a, b) => b.depth - a.depth || Number(b.draft) - Number(a.draft));
+    /** @type {object[]} */
+    const edges = [];
+    for (const edge of surfaces.filter((surface) => surface.kind === "edge")) {
+      /** @type {object[]} */
+      const p = edge.points;
+      /** @type {number} */
+      const length = (p[1].x - p[0].x) ** 2 + (p[1].y - p[0].y) ** 2;
+      if (length < 1e-8) continue;
+      /** @type {number} */
+      const t = Math.max(0, Math.min(1, ((point.x - p[0].x) * (p[1].x - p[0].x) +
+        (point.y - p[0].y) * (p[1].y - p[0].y)) / length));
+      /** @type {ScreenPoint} */
+      const nearest = { x: p[0].x + t * (p[1].x - p[0].x), y: p[0].y + t * (p[1].y - p[0].y) };
+      /** @type {number} */
+      const distance = Math.hypot(point.x - nearest.x, point.y - nearest.y);
+      if (distance > 8 * (this.editor.displayScale || 1)) continue;
+      /** @type {number} */
+      const depth = p[0].depth + t * (p[1].depth - p[0].depth);
+      if (faces.some((face) => (faceDepth(nearest, face) ?? -Infinity) > depth + 1e-6)) continue;
+      if (hits[0] && hits[0].index !== edge.index && hits[0].depth > depth + 1e-6) continue;
+      edges.push({ ...edge, depth, distance });
+    }
+    edges.sort((a, b) => a.distance - b.distance || b.depth - a.depth || Number(b.draft) - Number(a.draft));
+    return edges[0] || hits[0] || null;
+  }
+  /** @param {object | null} hit @returns {void} */
+  feedback(hit) {
+    this.editor.zoneLayer.querySelector(".surface-feedback")?.remove();
+    this.editor.svg.style.cursor = hit ? hit.kind === "edge" ? "nwse-resize" : "move" : "grab";
+    if (!hit) return;
+    this.editor.shape(hit.kind === "edge" ? "polyline" : "polygon", {
+      class: "surface-feedback", points: hit.points.map((point) => `${point.x},${point.y}`).join(" "),
+      fill: hit.kind === "edge" ? "none" : `${colour(hit.index)}25`, stroke: colour(hit.index),
+      "stroke-width": hit.kind === "edge" ? 5 : 2.5, "pointer-events": "none" }, this.editor.zoneLayer);
+  }
   /** @returns {void} */
   drawZones() {
     /** @type {CoordinateEditor} */
@@ -320,21 +450,13 @@ class SpatialRenderer {
     editor.zoneLayer.replaceChildren();
     /** @type {{points: string, depth: number, index: number, draft: boolean}[]} */
     const faces = [];
-    for (const [index, zone] of editor.zones.entries()) {
-      for (const [draft, bounds] of [[false, zone.actual], [true, index === editor.selected && zone.dirty ? zone.draft : null]]) {
-        if (!bounds || !Object.values(bounds).every(Number.isFinite)) continue;
-        /** @type {{x: number, y: number, depth: number}[]} */
-        const points = spatialCorners(bounds).map((point) => this.project(point));
-        /** @type {number[][]} */
-        const sides = points.length === 4 ? [[0, 1, 3, 2]] : [[0, 1, 3, 2], [4, 5, 7, 6],
-          [0, 1, 5, 4], [2, 3, 7, 6], [0, 2, 6, 4], [1, 3, 7, 5]];
-        for (const side of sides) faces.push({ points: side.map((key) => `${points[key].x},${points[key].y}`).join(" "),
-          depth: side.reduce((sum, key) => sum + points[key].depth, 0) / side.length, index, draft });
-      }
+    for (const surface of this.surfaces().filter((surface) => surface.kind === "face")) {
+      faces.push({ ...surface, points: surface.points.map((point) => `${point.x},${point.y}`).join(" "),
+        depth: surface.points.reduce((sum, point) => sum + point.depth, 0) / 4 });
     }
     faces.sort((first, second) => first.depth - second.depth);
     for (const face of faces) editor.shape("polygon", { points: face.points, "data-zone": face.index,
-      "data-depth": face.depth, "data-draft": face.draft, fill: `${colour(face.index)}${face.draft ? "08" : "12"}`,
+      "data-depth": face.depth, "data-draft": face.draft, "data-face": face.id, fill: `${colour(face.index)}${face.draft ? "08" : "12"}`,
       stroke: colour(face.index), "stroke-width": face.draft ? 2 : 1.3,
       "stroke-dasharray": face.draft ? "6 4" : "none", "pointer-events": "none" }, editor.zoneLayer);
     for (const [index, zone] of editor.zones.entries()) {
@@ -346,6 +468,12 @@ class SpatialRenderer {
           (Number.isFinite(zone.actual.z_max) ? "" : " (XY only)");
     }
     this.drawHandles();
+    if (editor.drag?.hit) {
+      /** @type {object} */
+      const active = this.surfaces().find((surface) => surface.index === editor.selected &&
+        surface.kind === editor.drag.hit.kind && surface.id === editor.drag.hit.id && surface.draft === Boolean(editor.zones[editor.selected].dirty));
+      this.feedback(active || editor.drag.hit);
+    }
   }
   /** Keep handle nodes stable while dragging, including between incoming polls.
    * @returns {void}
@@ -368,14 +496,14 @@ class SpatialRenderer {
         /** @type {number} */
         const length = Math.hypot(vector.x, vector.y);
         if (length < this.camera.scale * this.camera.zoom * 0.12) continue;
-        for (const edge of editor.manipulationMode === "resize" ? ["min", "max"] : ["move"]) {
+        for (const edge of ["min", "max"]) {
           /** @type {string} */
           const key = `${axis}-${edge}`;
           wanted.add(key);
           /** @type {SVGGElement} */
           const group = this.handleNode(key, axis, edge);
           /** @type {ScreenPoint} */
-          const start = this.project({ ...centre, ...(edge === "move" ? {} : { [axis]: zone.draft[`${axis}_${edge}`] }) });
+          const start = this.project({ ...centre, [axis]: zone.draft[`${axis}_${edge}`] });
           this.positionHandle(group, axis, edge, start, vector, length);
         }
       }
@@ -393,8 +521,10 @@ class SpatialRenderer {
     this.editor.shape("circle", { fill: "white", "stroke-width": 2, "pointer-events": "none" }, group);
     this.editor.shape("text", { "font-size": 13, "font-weight": 700, "pointer-events": "none" }, group);
     this.editor.shape("circle", { fill: "transparent", "pointer-events": "all", "data-axis": axis,
-      "data-edge": edge, "aria-label": `${edge === "move" ? "Move" : "Resize"} ${axis.toUpperCase()} ${edge === "move" ? "" : edge}`,
-      style: "cursor:grab" }, group);
+      "data-edge": edge, "aria-label": `Resize ${axis.toUpperCase()} ${edge}`,
+      style: "cursor:ew-resize" }, group);
+    this.editor.shape("path", { d: "M-7 0H7M-3-4L-7 0L-3 4M3-4L7 0L3 4", fill: "none",
+      "stroke-width": 1.7, "stroke-linecap": "round", "stroke-linejoin": "round", "pointer-events": "none" }, group);
     this.handles.set(key, group);
     return group;
   }
@@ -405,7 +535,7 @@ class SpatialRenderer {
     /** @type {number} */
     const displayScale = this.editor.displayScale || 1;
     /** @type {number} */
-    const extension = (edge === "move" ? 65 : edge === "min" ? -28 : 28) * displayScale;
+    const extension = (edge === "min" ? -28 : 28) * displayScale;
     /** @type {ScreenPoint} */
     const end = { x: start.x + vector.x / length * extension, y: start.y + vector.y / length * extension };
     /** @type {string} */
@@ -417,13 +547,15 @@ class SpatialRenderer {
     for (const child of [children[1], children[3]]) {
       child.setAttribute("cx", end.x);
       child.setAttribute("cy", end.y);
-      child.setAttribute("r", (child === children[1] ? 7 : 22) * displayScale);
+      child.setAttribute("r", (child === children[1] ? 12 : 22) * displayScale);
     }
     children[1].setAttribute("stroke", paint);
     children[2].setAttribute("x", end.x + 11 * displayScale);
     children[2].setAttribute("y", end.y - 9 * displayScale);
     children[2].setAttribute("fill", paint);
-    children[2].textContent = axis.toUpperCase() + (edge === "move" ? "" : edge === "min" ? "-" : "+");
+    children[2].textContent = axis.toUpperCase() + (edge === "min" ? "-" : "+")
+    children[4].setAttribute("stroke", paint);
+    children[4].setAttribute("transform", `translate(${end.x} ${end.y}) rotate(${Math.atan2(vector.y, vector.x) * 180 / Math.PI}) scale(${displayScale})`);
   }
   /** @returns {void} */
   render() {
@@ -511,7 +643,7 @@ class CoordinateEditor extends HTMLElement {
     this.observer?.disconnect();
     this.cancelInteraction();
     if (this.svg)
-      for (const handler of ["onpointerdown", "onpointermove", "onpointerup", "onpointercancel", "onkeydown", "onwheel"])
+      for (const handler of ["onpointerdown", "onpointermove", "onpointerup", "onpointercancel", "onpointerleave", "onkeydown", "onwheel"])
         this.svg[handler] = null;
   }
   async request(ref, value) {
@@ -723,8 +855,6 @@ class CoordinateEditor extends HTMLElement {
       "zoom-out": "M10 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12M14.5 14.5 21 21M7 10h6",
       "fit-view": "M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5M7 7h10v10H7z",
       "reset-view": "M4 9a8 8 0 1 1 0 6M4 3v6h6",
-      move: "M12 3v18M3 12h18M8 7l4-4 4 4M8 17l4 4 4-4M7 8l-4 4 4 4M17 8l4 4-4 4",
-      resize: "M4 10V4h6M14 20h6v-6M4 4l6 6M20 20l-6-6",
       "3d": "m12 3 9 5v9l-9 5-9-5V8zM3 8l9 5 9-5M12 13v9M12 3v10",
       top: "M4 4h16v16H4zM4 12h16M12 4v16",
       apply: "m4 12 5 5L20 6",
@@ -936,7 +1066,6 @@ class CoordinateEditor extends HTMLElement {
     this.selected ??= 0;
     this.view = { x: { ...this.config.axes.x }, y: { ...this.config.axes.y } };
     this.viewMode = this.config.axes.z ? "3d" : "top";
-    this.manipulationMode = "move";
     this.spatial = new SpatialRenderer(this);
     this.element("h2", this.config.title || "Coordinate zones", this.shadowRoot);
     this.summary = this.element("p", "", this.shadowRoot);
@@ -951,7 +1080,6 @@ class CoordinateEditor extends HTMLElement {
     this.sceneControls = this.element("div", "", map);
     this.sceneControls.className = "selectors scene-controls";
     this.viewButtons = {};
-    this.modeButtons = {};
     if (this.config.axes.z) {
       for (const [mode, label] of [["3d", "3D view"], ["top", "Top view"]]) {
         /** @type {HTMLButtonElement} */
@@ -960,14 +1088,6 @@ class CoordinateEditor extends HTMLElement {
         button.dataset.view = mode;
         button.onclick = () => this.setViewMode(mode);
         this.viewButtons[mode] = button;
-      }
-      for (const [mode, label] of [["move", "Move"], ["resize", "Resize"]]) {
-        /** @type {HTMLButtonElement} */
-        const button = this.element("button", label, this.sceneControls);
-        this.buttonIcon(button, mode);
-        button.dataset.mode = mode;
-        button.onclick = () => this.setManipulationMode(mode);
-        this.modeButtons[mode] = button;
       }
       for (const [action, label, callback] of [["zoom-in", "Zoom in", () => this.spatial.zoomBy(1.2)],
         ["zoom-out", "Zoom out", () => this.spatial.zoomBy(1 / 1.2)], ["reset-view", "Reset view", () => this.spatial.reset()]]) {
@@ -1079,6 +1199,7 @@ class CoordinateEditor extends HTMLElement {
     this.svg.onpointermove = (event) => this.updateGesture(event);
     this.svg.onpointerup = (event) => this.endGesture(event, false);
     this.svg.onpointercancel = (event) => this.endGesture(event, true);
+    this.svg.onpointerleave = () => { if (!this.drag && !this.orbit && this.viewMode === "3d") this.spatial.feedback(null); };
     this.svg.onkeydown = (event) => this.keyMove(event);
     this.svg.onwheel = (event) => {
       if (this.viewMode !== "3d") return;
@@ -1131,12 +1252,6 @@ class CoordinateEditor extends HTMLElement {
     this.drawGrid();
     this.refresh();
   }
-  /** @param {string} mode @returns {void} */
-  setManipulationMode(mode) {
-    if (!["move", "resize"].includes(mode) || this.drag) return;
-    this.manipulationMode = mode;
-    this.refresh();
-  }
   /** @param {PointerEvent} event @returns {ScreenPoint | null} */
   scenePointer(event) {
     /** @type {DOMMatrix | null} */
@@ -1152,18 +1267,25 @@ class CoordinateEditor extends HTMLElement {
     /** @type {ScreenPoint | null} */
     const point = this.scenePointer(event);
     if (!point) return;
+    /** @type {SVGElement | null} */
+    const handle = this.spatial.pickHandle(point) || (event.target.dataset.axis ? event.target : null);
     /** @type {string | undefined} */
-    const axis = event.target.dataset.axis;
+    const axis = handle?.dataset.axis;
+    /** @type {object | null} */
+    const hit = axis ? null : this.spatial.pick(point);
+    if (hit) this.selected = hit.index;
     /** @type {object | undefined} */
     const zone = this.zones[this.selected];
-    if (axis) {
-      if (!this.editable(zone)) return;
-      /** @type {ScreenPoint} */
-      const vector = this.spatial.axisVector(axis);
-      if (Math.hypot(vector.x, vector.y) < this.spatial.camera.scale * this.spatial.camera.zoom * 0.12) return;
-      this.drag = { zone, point, axis, vector, edge: event.target.dataset.edge, pointer: event.pointerId,
+    if (axis || hit) {
+      this.refresh();
+      if (!this.editable(zone)) { event.preventDefault(); return; }
+      /** @type {string[]} */
+      const tangent = hit?.tangent || [];
+      this.drag = { zone, point, axis, vector: axis ? this.spatial.axisVector(axis) : null,
+        hit, tangent, vectors: tangent.map((key) => this.spatial.axisVector(key)),
+        client: { x: event.clientX, y: event.clientY }, active: false,
+        edge: handle?.dataset.edge, pointer: event.pointerId,
         bounds: { ...zone.draft }, dirty: zone.dirty, message: zone.message };
-      zone.revision = (zone.revision || 0) + 1;
     } else {
       this.orbit = { point, pointer: event.pointerId, yaw: this.spatial.camera.yaw, pitch: this.spatial.camera.pitch };
     }
@@ -1206,7 +1328,44 @@ class CoordinateEditor extends HTMLElement {
       return;
     }
     const gesture = this.drag;
-    if (!gesture || event.pointerId !== gesture.pointer || this.busy) return;
+    if (!gesture) {
+      if (this.viewMode === "3d") {
+        /** @type {ScreenPoint | null} */
+        const point = this.scenePointer(event);
+        if (point) {
+          this.spatial.feedback(this.spatial.pickHandle(point) ? null : this.spatial.pick(point));
+          if (this.spatial.pickHandle(point)) this.svg.style.cursor = "ew-resize";
+        }
+      }
+      return;
+    }
+    if (event.pointerId !== gesture.pointer || this.busy) return;
+    if (gesture.client) {
+      if (!this.editable(gesture.zone)) return;
+      if (!gesture.active && Math.hypot(event.clientX - gesture.client.x, event.clientY - gesture.client.y) < 4) return;
+      gesture.active = true;
+    }
+    if (gesture.hit) {
+      /** @type {ScreenPoint | null} */
+      const point = this.scenePointer(event);
+      if (!point) return;
+      /** @type {number[] | null} */
+      const delta = planeDisplacement({ x: point.x - gesture.point.x, y: point.y - gesture.point.y }, gesture.vectors);
+      if (!delta) return;
+      /** @type {Bounds | null} */
+      let bounds = { ...gesture.bounds };
+      if (gesture.hit.kind === "face") {
+        bounds = moveBounds(bounds, Object.fromEntries(gesture.tangent.map((key, index) => [key, delta[index]])), this.config.axes);
+      } else {
+        for (const [index, key] of gesture.tangent.entries()) {
+          /** @type {string} */
+          const edge = gesture.hit.boundaries[key];
+          bounds = bounds && resizeAxisBounds(bounds, key, edge, gesture.bounds[`${key}_${edge}`] + delta[index], this.config.axes[key]);
+        }
+      }
+      if (bounds && !same(bounds, gesture.zone.draft)) this.setDraft(gesture.zone, bounds);
+      return;
+    }
     if (gesture.axis) {
       /** @type {ScreenPoint | null} */
       const point = this.scenePointer(event);
@@ -1215,8 +1374,7 @@ class CoordinateEditor extends HTMLElement {
       const displacement = axisDisplacement({ x: point.x - gesture.point.x, y: point.y - gesture.point.y }, gesture.vector);
       if (displacement === null) return;
       /** @type {Bounds | null} */
-      const bounds = gesture.edge === "move" ? moveBounds(gesture.bounds, { [gesture.axis]: displacement }, this.config.axes) :
-        resizeAxisBounds(gesture.bounds, gesture.axis, gesture.edge,
+      const bounds = resizeAxisBounds(gesture.bounds, gesture.axis, gesture.edge,
           gesture.bounds[`${gesture.axis}_${gesture.edge}`] + displacement, this.config.axes[gesture.axis]);
       if (bounds && !same(bounds, gesture.zone.draft)) this.setDraft(gesture.zone, bounds);
       return;
@@ -1254,7 +1412,7 @@ class CoordinateEditor extends HTMLElement {
     if (cancel) {
       gesture.zone.draft = gesture.bounds;
       gesture.zone.dirty = gesture.dirty;
-      gesture.zone.message = gesture.message;
+      if (!gesture.zone.conflict) gesture.zone.message = gesture.message;
     }
     this.drag = null;
     if (this.svg.hasPointerCapture?.(gesture.pointer)) this.svg.releasePointerCapture(gesture.pointer);
@@ -1530,17 +1688,12 @@ class CoordinateEditor extends HTMLElement {
       this.spatial.drawGrid();
     }
     for (const [mode, button] of Object.entries(this.viewButtons || {})) button.setAttribute("aria-pressed", String(mode === this.viewMode));
-    for (const [mode, button] of Object.entries(this.modeButtons || {})) {
-      button.hidden = this.viewMode !== "3d";
-      button.disabled = !this.editable(this.zones[this.selected]) || Boolean(this.drag);
-      button.setAttribute("aria-pressed", String(mode === this.manipulationMode));
-    }
     for (const button of this.sceneControls?.querySelectorAll("[data-action]") || []) {
       button.hidden = this.viewMode !== "3d";
       button.disabled = Boolean(this.drag || this.orbit);
     }
     if (this.hint) this.hint.textContent = this.viewMode === "3d" ?
-      "Drag empty space to orbit. Use the wheel or Zoom buttons. Choose Move or Resize and drag the labelled X/Y/Z handles. " +
+      "Drag empty space to orbit. Use the wheel or Zoom buttons. Drag a face to move its plane, an edge to resize two axes, or an X/Y/Z handle to resize one axis. " +
         "Arrow keys move X/Y. PageUp/PageDown move Z, Shift by ten. Escape cancels." :
       "Drag inside a zone to move it. Drag a corner to resize. Arrow keys move by one step, Shift by ten. Escape cancels.";
     this.forms?.forEach((form, index) => {
