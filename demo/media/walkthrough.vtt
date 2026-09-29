@@ -1,58 +1,58 @@
 WEBVTT
 
 1
-00:00:00.000 --> 00:00:05.001
+00:00:00.000 --> 00:00:05.002
 Simulated XYZ targets move through four LD6004 detection cuboids. Drop-lines
 show height above the floor.
 
 2
-00:00:05.001 --> 00:00:10.002
+00:00:05.002 --> 00:00:10.003
 Drag empty scene space to orbit. Icon buttons zoom the camera without changing
 bounds.
 
 3
-00:00:10.002 --> 00:00:19.002
+00:00:10.003 --> 00:00:19.004
 Click another cube. Drag faces to move X/Y and height, then a vertical edge to
 resize X/Y. The height arrow clamps at the limit.
 
 4
-00:00:19.002 --> 00:00:21.056
+00:00:19.004 --> 00:00:21.072
 Enter 4.2 metres. Apply uses staged writes.
 
 5
-00:00:21.056 --> 00:00:21.722
+00:00:21.072 --> 00:00:21.806
 Apply is pending.
 
 6
-00:00:21.722 --> 00:00:25.003
+00:00:21.806 --> 00:00:25.006
 The simulated actual values now agree. The staged draft is confirmed.
 
 7
-00:00:25.003 --> 00:00:29.004
+00:00:25.006 --> 00:00:29.008
 A further height edit stays local. Discard restores actual values, and Fit
 adjusts the camera.
 
 8
-00:00:29.004 --> 00:00:35.005
+00:00:29.008 --> 00:00:35.010
 Top view edits the same zone as a rectangle. Drag its centre to move and a
 corner to resize.
 
 9
-00:00:35.005 --> 00:00:39.006
+00:00:35.010 --> 00:00:39.013
 Pause freezes target motion while precise editing remains available. Resume
 starts motion again.
 
 10
-00:00:39.006 --> 00:00:45.006
+00:00:39.013 --> 00:00:45.013
 LD2450 uses a 2D map and direct writes. Apply updates the simulated millimetre
 entities from metre bounds.
 
 11
-00:00:45.006 --> 00:00:51.007
+00:00:45.013 --> 00:00:51.014
 LD6002B adds four interference areas. Select Interference 0 and resize its
 height and X bound precisely with axis arrows.
 
 12
-00:00:51.007 --> 00:00:54.008
+00:00:51.014 --> 00:00:54.014
 Reset clears local edits and restores the simulated sensor mapping. Try the
 interactive demo.
