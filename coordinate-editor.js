@@ -243,6 +243,8 @@ class SpatialRenderer {
     this.camera = { yaw: -0.65, pitch: 0.58, zoom: 1, scale: 35, centre: { x: 0, y: 0, z: 1 } };
     /** @type {Map<string, SVGGElement>} */
     this.handles = new Map();
+    /** @type {ScreenPoint | null} */
+    this.hoverPoint = null;
     /** @type {boolean} */
     this.framed = false;
   }
@@ -433,6 +435,16 @@ class SpatialRenderer {
     edges.sort((a, b) => a.distance - b.distance || b.depth - a.depth || Number(b.draft) - Number(a.draft));
     return edges[0] || hits[0] || null;
   }
+  /** Recompute stationary hover against current geometry after polling or camera redraws.
+   * @param {ScreenPoint | null} point @returns {void}
+   */
+  hover(point) {
+    this.hoverPoint = point;
+    /** @type {SVGElement | null} */
+    const handle = point ? this.pickHandle(point) : null;
+    this.feedback(point && !handle ? this.pick(point) : null);
+    if (handle) this.editor.svg.style.cursor = "ew-resize";
+  }
   /** @param {object | null} hit @returns {void} */
   feedback(hit) {
     this.editor.zoneLayer.querySelector(".surface-feedback")?.remove();
@@ -473,7 +485,7 @@ class SpatialRenderer {
       const active = this.surfaces().find((surface) => surface.index === editor.selected &&
         surface.kind === editor.drag.hit.kind && surface.id === editor.drag.hit.id && surface.draft === Boolean(editor.zones[editor.selected].dirty));
       this.feedback(active || editor.drag.hit);
-    }
+    } else if (!editor.drag && !editor.orbit) this.hover(this.hoverPoint);
   }
   /** Keep handle nodes stable while dragging, including between incoming polls.
    * @returns {void}
@@ -1199,7 +1211,10 @@ class CoordinateEditor extends HTMLElement {
     this.svg.onpointermove = (event) => this.updateGesture(event);
     this.svg.onpointerup = (event) => this.endGesture(event, false);
     this.svg.onpointercancel = (event) => this.endGesture(event, true);
-    this.svg.onpointerleave = () => { if (!this.drag && !this.orbit && this.viewMode === "3d") this.spatial.feedback(null); };
+    this.svg.onpointerleave = () => {
+      this.spatial.hoverPoint = null;
+      if (!this.drag && !this.orbit && this.viewMode === "3d") this.spatial.hover(null);
+    };
     this.svg.onkeydown = (event) => this.keyMove(event);
     this.svg.onwheel = (event) => {
       if (this.viewMode !== "3d") return;
@@ -1245,6 +1260,7 @@ class CoordinateEditor extends HTMLElement {
   setViewMode(mode) {
     if (!["3d", "top"].includes(mode) || mode === "3d" && !this.config.axes.z) return;
     this.cancelInteraction();
+    this.spatial.hoverPoint = null;
     this.viewMode = mode;
     this.handleLayer.replaceChildren();
     this.spatial.handles.clear();
@@ -1273,6 +1289,7 @@ class CoordinateEditor extends HTMLElement {
     const axis = handle?.dataset.axis;
     /** @type {object | null} */
     const hit = axis ? null : this.spatial.pick(point);
+    this.spatial.hoverPoint = null;
     if (hit) this.selected = hit.index;
     /** @type {object | undefined} */
     const zone = this.zones[this.selected];
@@ -1332,10 +1349,7 @@ class CoordinateEditor extends HTMLElement {
       if (this.viewMode === "3d") {
         /** @type {ScreenPoint | null} */
         const point = this.scenePointer(event);
-        if (point) {
-          this.spatial.feedback(this.spatial.pickHandle(point) ? null : this.spatial.pick(point));
-          if (this.spatial.pickHandle(point)) this.svg.style.cursor = "ew-resize";
-        }
+        if (point) this.spatial.hover(point);
       }
       return;
     }

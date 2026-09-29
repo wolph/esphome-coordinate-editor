@@ -686,3 +686,30 @@ test("threshold uses CSS pixels and permanent arrows retain 44 pixel targets", (
   assert.equal(zone.dirty, false);
   dom.window.close();
 });
+
+test("stationary hover survives redraw and clears when geometry moves, the pointer leaves or the view changes", () => {
+  /** @type {TestContext} */
+  const { dom, editor, zone } = setup();
+  /** @type {{x:number,y:number}} */
+  const point = editor.spatial.project({ x: 0, y: 2, z: 2 });
+  editor.updateGesture(pointer(editor.svg, point.x, point.y));
+  assert.ok(editor.zoneLayer.querySelector(".surface-feedback"));
+  editor.refresh();
+  assert.ok(editor.zoneLayer.querySelector(".surface-feedback"));
+  zone.actual = { ...box, x_min: 4, x_max: 6 };
+  zone.draft = { ...zone.actual };
+  editor.refresh();
+  assert.equal(editor.zoneLayer.querySelector(".surface-feedback"), null);
+  zone.actual = { ...box };
+  zone.draft = { ...box };
+  editor.refresh();
+  assert.ok(editor.zoneLayer.querySelector(".surface-feedback"));
+  editor.svg.onpointerleave();
+  editor.refresh();
+  assert.equal(editor.zoneLayer.querySelector(".surface-feedback"), null);
+  editor.updateGesture(pointer(editor.svg, point.x, point.y));
+  editor.setViewMode("top");
+  editor.setViewMode("3d");
+  assert.equal(editor.zoneLayer.querySelector(".surface-feedback"), null);
+  dom.window.close();
+});
