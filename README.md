@@ -18,7 +18,7 @@ The preview and [live demo](https://wolph.github.io/esphome-coordinate-editor/) 
 data. Try dragging, resizing, precise bounds, Apply and Discard without connecting a device.
 Reset and sensor switching discard local edits. All demo entity reads and writes stay in memory.
 
-- Move and resize XYZ zones with direct axis handles in an orbitable 3D scene.
+- Drag cube faces to move XYZ zones and edges to resize them in an orbitable 3D scene.
 - Edit precise rectangles in Top view, with equal X/Y scale.
 - Enter exact bounds, move by keyboard and fit the viewport to your zones.
 - Compare actual bounds with local drafts before applying changes.
@@ -42,8 +42,10 @@ transparent cuboids. Target drop-lines show height above the floor. All three ax
 unit scale. Initial framing includes the X/Y room and configured zone heights, leaving empty
 negative Z space out of the scene.
 
-Select **Move** and drag an X, Y or Z handle to translate a zone. Select **Resize** to move one
-minimum or maximum face. Movement snaps to configured steps and stays within permitted bounds.
+Click a cube to select its area. Drag a face to translate the zone along that face: the top
+face moves X/Y and side faces include height. Drag an edge to resize both perpendicular
+bounds. The permanent X, Y and Z arrows resize one bound at a time.
+Movement snaps to configured steps and stays within permitted bounds.
 **Top view** preserves the precise rectangle editor: drag inside a zone to move it or drag a
 corner to resize it. Both views retain local drafts. Numeric bounds are always available.
 
@@ -302,9 +304,9 @@ npm run check:demo
 ```
 
 The browser check starts its own temporary loopback server and uses the actual editor and
-simulator. It checks 3D orbit and zoom, clamped XYZ handles, local drafts, staged and direct
-Apply, Discard, Top view, pause and resume, all sensor presets, reduced motion and desktop,
-tablet and mobile layouts. Entity requests stay in memory. Console errors fail the check.
+simulator. It checks 3D orbit and zoom, cube selection, face movement, edge resizing and
+clamped XYZ arrows, local drafts, staged and direct Apply, Discard, Top view, pause and resume,
+all sensor presets, reduced motion and desktop, tablet and mobile layouts. Entity requests stay in memory. Console errors fail the check.
 The Pages workflow runs this check before building the site.
 
 Install `ffmpeg` with your system package manager (`brew install ffmpeg` on macOS or

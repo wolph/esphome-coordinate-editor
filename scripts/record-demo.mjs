@@ -133,7 +133,7 @@ async function main() {
       await exportMedia(video, media, cues);
       await cp(media, path.join(root, "demo", "media"), { recursive: true });
     }
-    console.log(recording ? "Assets saved in demo/media/." : "Browser checks passed: XYZ motion/orbit/zoom/clamped handles, staged/direct Apply, Discard, Top view, pause/resume, all presets, responsive layout and reduced motion.");
+    console.log(recording ? "Assets saved in demo/media/." : "Browser checks passed: XYZ motion/orbit/zoom, cube selection, face translation, two-axis edge resizing, clamped arrows, staged/direct Apply, Discard, Top view, pause/resume, all presets, responsive layout and reduced motion.");
   } finally {
     /** @type {PromiseSettledResult<any>[]} */
     const cleanup = await Promise.allSettled([browser?.close(), server?.close(), rm(temporary, { recursive: true, force: true })]);

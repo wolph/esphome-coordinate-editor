@@ -92,23 +92,114 @@ async function orbitAndZoom(sequence) {
   assert.equal((await snapshot(sequence.page)).dirty, false, "Camera controls do not edit bounds");
 }
 
+/** Locate a visible cube surface through the editor's geometric picker.
+ * @param {Sequence} sequence @param {'face'|'edge'} kind @param {number} index @param {string[]} axes @returns {Promise<{point: Point, axis: string}>}
+ */
+async function surface(sequence, kind, index, axes) {
+  /** @type {import('playwright').Frame} */
+  const frame = editorFrame(sequence.page);
+  /** @type {import('playwright').BoundingBox} */
+  const box = await sequence.page.locator("#editor-frame").boundingBox();
+  /** @type {{point: Point, axis: string} | null} */
+  const found = await frame.evaluate(({ kind, index, axes }) => {
+    /** @type {any} */
+    const editor = window.demoFrame.editor;
+    /** @type {DOMMatrix} */
+    const matrix = editor.svg.getScreenCTM();
+    /** @type {Point[]} */
+    const candidates = [];
+    for (const polygon of editor.svg.querySelectorAll(`polygon[data-zone='${index}']`)) {
+      /** @type {Point[]} */
+      const points = Array.from(polygon.points, (point) => ({ x: point.x, y: point.y }));
+      if (points.length !== 4) continue;
+      if (kind === "face") {
+        for (const u of [0.5, 0.3, 0.7]) {
+          for (const v of [0.5, 0.3, 0.7]) {
+            candidates.push({ x: points[0].x + u * (points[1].x - points[0].x) + v * (points[3].x - points[0].x),
+              y: points[0].y + u * (points[1].y - points[0].y) + v * (points[3].y - points[0].y) });
+          }
+        }
+      } else {
+        points.forEach((point, edge) => {
+          /** @type {Point} */
+          const next = points[(edge + 1) % points.length];
+          for (const fraction of [0.5, 0.25, 0.75]) candidates.push({
+            x: point.x + (next.x - point.x) * fraction, y: point.y + (next.y - point.y) * fraction });
+        });
+      }
+    }
+    for (const point of candidates) {
+      /** @type {any} */
+      const picked = editor.spatial.pick(point);
+      if (editor.spatial.pickHandle(point)) continue;
+      if (picked?.kind !== kind || picked.index !== index || !axes.includes(picked.axis)) continue;
+      /** @type {Point} */
+      const client = { x: matrix.a * point.x + matrix.c * point.y + matrix.e,
+        y: matrix.b * point.x + matrix.d * point.y + matrix.f };
+      /** @type {Element | null} */
+      const hit = editor.shadowRoot.elementFromPoint(client.x, client.y);
+      if (!hit || hit.closest("[data-axis]")) continue;
+      return { point: client, axis: picked.axis };
+    }
+    return null;
+  }, { kind, index, axes });
+  assert.ok(found, `Visible ${kind} for area ${index} on ${axes.join("/")}`);
+  return { point: { x: found.point.x + box.x, y: found.point.y + box.y }, axis: found.axis };
+}
+
+/** @param {Sequence} sequence @param {'face'|'edge'} kind @param {string[]} normals @param {Record<string, number>} movement @returns {Promise<void>} */
+async function surfaceDrag(sequence, kind, normals, movement) {
+  /** @type {any} */
+  const state = await snapshot(sequence.page);
+  /** @type {{point: Point, axis: string}} */
+  const target = await surface(sequence, kind, state.selected, normals);
+  /** @type {Point} */
+  const delta = await editorFrame(sequence.page).evaluate((movement) => {
+    /** @type {any} */
+    const editor = window.demoFrame.editor;
+    /** @type {DOMMatrix} */
+    const matrix = editor.svg.getScreenCTM();
+    /** @type {Point} */
+    const projected = { x: 0, y: 0 };
+    for (const [axis, units] of Object.entries(movement)) {
+      /** @type {Point} */
+      const vector = editor.spatial.axisVector(axis);
+      projected.x += vector.x * units;
+      projected.y += vector.y * units;
+    }
+    return { x: matrix.a * projected.x + matrix.c * projected.y, y: matrix.b * projected.x + matrix.d * projected.y };
+  }, movement);
+  await drag(sequence, target.point, { x: target.point.x + delta.x, y: target.point.y + delta.y });
+  assertBounds(await snapshot(sequence.page));
+}
+
 /** @param {Sequence} sequence @returns {Promise<void>} */
 async function manipulateXYZ(sequence) {
+  /** @type {{point: Point, axis: string}} */
+  const other = await surface(sequence, "face", 1, ["x", "y", "z"]);
+  await sequence.page.mouse.click(other.point.x, other.point.y);
+  assert.equal((await snapshot(sequence.page)).selected, 1, "Cube click selects another area");
   /** @type {any} */
   const before = await snapshot(sequence.page);
-  await axisDrag(sequence, "x", "move", 0.8);
-  await axisDrag(sequence, "z", "move", 0.4);
+  await surfaceDrag(sequence, "face", ["z"], { x: 0.3, y: 0.3 });
+  /** @type {any} */
+  const horizontal = await snapshot(sequence.page);
+  assert.notEqual(horizontal.draft.x_min, before.draft.x_min, "Top face moves X");
+  assert.notEqual(horizontal.draft.y_min, before.draft.y_min, "Top face moves Y");
+  await surfaceDrag(sequence, "face", ["x", "y"], { z: 0.3 });
   /** @type {any} */
   const moved = await snapshot(sequence.page);
-  assert.notEqual(moved.draft.x_min, before.draft.x_min, "X handle moves the zone");
-  assert.equal(moved.draft.z_max - moved.draft.z_min, before.draft.z_max - before.draft.z_min, "Z movement preserves height");
-  assert.notEqual(moved.draft.z_min, before.draft.z_min, "Z handle changes height position");
-  await editorFrame(sequence.page).getByRole("button", { name: "Resize", exact: true }).click();
+  assert.notEqual(moved.draft.z_min, before.draft.z_min, "Side face moves height");
+  assert.ok(Math.abs(moved.draft.z_max - moved.draft.z_min - (before.draft.z_max - before.draft.z_min)) < 1e-8, "Face movement preserves height");
+  await surfaceDrag(sequence, "edge", ["z"], { x: 0.3, y: 0.3 });
+  /** @type {any} */
+  const edged = await snapshot(sequence.page);
+  assert.notEqual(edged.draft.x_max - edged.draft.x_min, moved.draft.x_max - moved.draft.x_min, "Vertical edge resizes X");
+  assert.notEqual(edged.draft.y_max - edged.draft.y_min, moved.draft.y_max - moved.draft.y_min, "Vertical edge resizes Y");
   await axisDrag(sequence, "z", "max", 10);
   /** @type {any} */
   const resized = await snapshot(sequence.page);
-  assert.equal(resized.draft.z_max, resized.axes.z.max, "Height face clamps at permitted maximum");
-  assert.equal(resized.draft.z_min, moved.draft.z_min, "Maximum-face resizing retains the minimum height");
+  assert.equal(resized.draft.z_max, resized.axes.z.max, "Height arrow clamps at permitted maximum");
   assert.deepEqual(resized.actual, before.actual, "Gestures leave actual bounds untouched");
   await editorFrame(sequence.page).getByRole("button", { name: "Fit view", exact: true }).click();
 }
@@ -209,8 +300,7 @@ async function interferenceArea(sequence) {
   assert.equal((await snapshot(sequence.page)).selected, 4);
   assert.equal((await snapshot(sequence.page)).zoneCount, 8);
   assert.equal((await snapshot(sequence.page)).view, "3d");
-  await axisDrag(sequence, "z", "move", 0.3);
-  await editorFrame(sequence.page).getByRole("button", { name: "Resize", exact: true }).click();
+  await axisDrag(sequence, "z", "max", 0.3);
   await axisDrag(sequence, "x", "max", 0.4);
   assert.equal((await snapshot(sequence.page)).dirty, true);
   await editorFrame(sequence.page).getByRole("button", { name: "Fit view", exact: true }).click();
@@ -230,13 +320,13 @@ export async function runSequence(sequence) {
     await editorFrame(sequence.page).waitForFunction((first) => window.demoFrame.editor.targets.some((target, index) => target.z !== first[index].z), first.targets);
   });
   await shot(sequence, 5, "Drag empty scene space to orbit. Icon buttons zoom the camera without changing bounds.", () => orbitAndZoom(sequence));
-  await shot(sequence, 6, "Move with X and Z handles, then resize height. The maximum face stops at the configured limit. Fit includes the draft.", () => manipulateXYZ(sequence));
+  await shot(sequence, 9, "Click another cube. Drag faces to move X/Y and height, then a vertical edge to resize X/Y. The height arrow clamps at the limit.", () => manipulateXYZ(sequence));
   await shot(sequence, 6, "Enter 4.2 metres. Apply uses staged writes.", () => stagedApply(sequence));
-  await shot(sequence, 5, "A further height edit stays local. Discard restores actual values, and Fit adjusts the camera.", () => discardAndFit(sequence));
+  await shot(sequence, 4, "A further height edit stays local. Discard restores actual values, and Fit adjusts the camera.", () => discardAndFit(sequence));
   await shot(sequence, 6, "Top view edits the same zone as a rectangle. Drag its centre to move and a corner to resize.", () => topView(sequence));
   await shot(sequence, 4, "Pause freezes target motion while precise editing remains available. Resume starts motion again.", () => pauseResume(sequence));
   await shot(sequence, 6, "LD2450 uses a 2D map and direct writes. Apply updates the simulated millimetre entities from metre bounds.", () => directApply(sequence));
-  await shot(sequence, 8, "LD6002B adds four interference areas. Select Interference 0 and move and resize it with XYZ handles.", () => interferenceArea(sequence));
+  await shot(sequence, 6, "LD6002B adds four interference areas. Select Interference 0 and resize its height and X bound precisely with axis arrows.", () => interferenceArea(sequence));
   await shot(sequence, 3, "Reset clears local edits and restores the simulated sensor mapping. Try the interactive demo.", async () => {
     await sequence.page.getByRole("button", { name: "Reset", exact: true }).click();
     await waitReady(sequence.page, "ld6002b");
