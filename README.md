@@ -61,16 +61,18 @@ XY-only zones in an XYZ configuration appear as labelled floor footprints.
 ## Quick start
 
 > [!NOTE]
-> The installation examples pin `v0.1.0`, which uses an X/Y map.
-> For the current controls and sensor mappings shown above, replace `@v0.1.0` in both module URLs with
+> The installation examples pin `v0.1.1`, which uses an X/Y map.
+> For the current controls and sensor mappings shown above, replace `@v0.1.1` in both imports with
 > `@664b1e6f498e5233a781f41524ce039f33c426b6` to use this tested preview.
 
 Merge one of the example YAML files into your device configuration, set its UART pins,
 and retain your board, network and authentication settings. The YAML files are fragments,
 not complete firmware configurations. Their entity names match the accompanying mapping files.
 
-These examples require an ESPHome build with the new `web_server.js_extra_urls` option.
-If your build rejects that option, use the local `js_include` route below.
+Each example has a matching `*-addons.js` file. Save it next to your device YAML.
+`js_include` embeds it in the firmware, and the page loads it as a JavaScript module
+that imports the editor and its mapping. Keep `js_url` at its default and leave `local` off:
+the embedded `local` interface does not load `js_include`.
 Keep the stock web interface enabled. The editor mounts immediately below `<esp-app>` as a
 sibling, outside the stock app's shadow DOM.
 
@@ -81,9 +83,14 @@ Use [examples/ld2450.yaml](examples/ld2450.yaml) with this web-server configurat
 ```yaml
 web_server:
   version: 3
-  js_extra_urls:
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/coordinate-editor.js
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/examples/ld2450-config.js
+  js_include: ld2450-addons.js
+```
+
+[ld2450-addons.js](examples/ld2450-addons.js) imports the editor and its mapping:
+
+```javascript
+import "https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.1/coordinate-editor.js";
+import "https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.1/examples/ld2450-config.js";
 ```
 
 [ld2450-config.js](examples/ld2450-config.js) maps `Target X`, `Target Y` and four number
@@ -99,9 +106,14 @@ Use [examples/ld6004.yaml](examples/ld6004.yaml) with:
 ```yaml
 web_server:
   version: 3
-  js_extra_urls:
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/coordinate-editor.js
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/examples/ld6004-config.js
+  js_include: ld6004-addons.js
+```
+
+[ld6004-addons.js](examples/ld6004-addons.js) imports the editor and its mapping:
+
+```javascript
+import "https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.1/coordinate-editor.js";
+import "https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.1/examples/ld6004-config.js";
 ```
 
 [ld6004-config.js](examples/ld6004-config.js) maps X/Y/Z targets and four detection areas in
@@ -118,25 +130,27 @@ components. The original example references the development series
 [buttons #19846](https://github.com/esphome/esphome/pull/19846).
 Check your firmware's component availability before using the fragment.
 
-For LD6002B, use [ld6002b.yaml](examples/ld6002b.yaml) and
-[ld6002b-config.js](examples/ld6002b-config.js). The adapter uses the `ld6002b` components
+For LD6002B, use [ld6002b.yaml](examples/ld6002b.yaml), [ld6002b-addons.js](examples/ld6002b-addons.js)
+and [ld6002b-config.js](examples/ld6002b-config.js). The adapter uses the `ld6002b` components
 and maps eight areas: four detection and four interference areas. There are no dwell areas.
 
 Browsers fetch module scripts with CORS, so whatever host serves the files must send an
 `Access-Control-Allow-Origin` header that admits the device's origin. jsDelivr does. A plain
 file server on your LAN usually does not.
 
-The URLs above pin the `v0.1.0` tag. See [CHANGELOG.md](CHANGELOG.md) for releases
+The imports pin the `v0.1.1` tag. See [CHANGELOG.md](CHANGELOG.md) for releases
 and update the pinned ref when upgrading.
 
 ## Delivering configuration
 
-The device generates its page, so an inline module is not normally available to edit.
-The practical route is a second module URL in `js_extra_urls`, as shown above.
-Host your own copy of the matching configuration file when changing entity names or room limits.
-It assigns `window.coordinateEditorConfig`, then dispatches an event so either script can finish first:
+To change entity names or room limits, replace the mapping import in your addons file with the
+configuration itself. The file is embedded in the firmware, so nothing else needs hosting,
+and a change takes effect after the next install. The configuration assigns
+`window.coordinateEditorConfig`, then dispatches an event so either script can finish first:
 
 ```javascript
+import "https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.1/coordinate-editor.js";
+
 window.coordinateEditorConfig = {
   unit: "m",
   axes: {
@@ -184,27 +198,6 @@ Automatic mounting waits for `<esp-app>` and configuration. It leaves an existin
 `<coordinate-editor>` alone. Configuration is read on initialisation, not watched for live changes.
 Assigning `editor.config` before inserting a manually created element remains supported and
 bypasses automatic source selection.
-
-### Local `js_include`
-
-For firmware without `js_extra_urls`, concatenate the editor and one configuration into a local file:
-
-```sh
-cat coordinate-editor.js examples/ld2450-config.js > coordinate-editor-local.js
-```
-
-Then load it alongside the normal ESPHome web interface:
-
-```yaml
-web_server:
-  version: 3
-  js_include: coordinate-editor-local.js
-```
-
-Use `examples/ld6004-config.js` or `examples/ld6002b-config.js` for the corresponding adapter.
-Existing scripts that create an element, assign `editor.config` and append it still work.
-`js_include` embeds the local file as `/0.js`, as described in the
-[ESPHome web-server documentation](https://esphome.io/components/web_server/).
 
 ## Configuration reference
 
