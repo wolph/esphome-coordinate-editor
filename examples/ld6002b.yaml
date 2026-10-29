@@ -12,9 +12,8 @@ ld6002b:
 
 web_server:
   version: 3
-  js_extra_urls:
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/coordinate-editor.js
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/examples/ld6002b-config.js
+  # ld6002b-addons.js sits next to this file and imports the editor and its mapping.
+  js_include: ld6002b-addons.js
 
 binary_sensor:
   - platform: ld6002b

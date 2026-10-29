@@ -1,6 +1,6 @@
 {
   "name": "esphome-coordinate-editor",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Optional zone and coordinate editor for the ESPHome web interface, for 2D and 3D radar sensors",
   "type": "module",
   "main": "coordinate-editor.js",

@@ -12,9 +12,8 @@ ld2450:
 
 web_server:
   version: 3
-  js_extra_urls:
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/coordinate-editor.js
-    - https://cdn.jsdelivr.net/gh/wolph/esphome-coordinate-editor@v0.1.0/examples/ld2450-config.js
+  # ld2450-addons.js sits next to this file and imports the editor and its mapping.
+  js_include: ld2450-addons.js
 
 sensor:
   - platform: ld2450
